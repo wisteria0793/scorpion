@@ -1,0 +1,9 @@
+# 開発環境
+venv
+.python-version
+
+# macOSやWindowsが自動生成する隠しファイル
+.DS_Store
+
+# データファイル
+data
