@@ -6,4 +6,5 @@ venv
 .DS_Store
 
 # データファイル
-data
+data/
+storage/
