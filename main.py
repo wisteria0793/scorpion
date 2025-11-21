@@ -4,17 +4,39 @@ from llama_index.llms.ollama import Ollama
 from llama_index.embeddings.ollama import OllamaEmbedding
 from llama_index.core import VectorStoreIndex, load_index_from_storage
 from llama_index.core.storage.storage_context import StorageContext
+from llama_index.readers.file import PDFReader
+from llama_index.core.ingestion import IngestionPipeline
+
 
 # データを保存するディレクトリ
 PERSIST_DIR = "./storage"
 
-def read_files():
-    # PDFファイルを読み取るディレクトリを指定
-    loader = SimpleDirectoryReader(input_dir = './data')
-    documents = loader.load_data()
+
+# def read_files():
+#     # PDFファイルを読み取るディレクトリを指定
+#     loader = SimpleDirectoryReader(input_dir = './data')
+#     documents = loader.load_data()
     
-    print(f"読み込まれたドキュメントの数: {len(documents)}")
+#     print(f"読み込まれたドキュメントの数: {len(documents)}")
+#     return documents
+
+
+# Table Extractor を直接パイプラインに組み込むのではなく、
+# ロード時に構造化解析を行います (PyMuPDFがバックエンドで有効な場合)
+# このアプローチは、PyMuPDFが表をテキストに変換する精度に依存します。
+
+def read_files_with_table_support():
+    # PDFファイルを読み取るディレクトリを指定し、PDFReaderを使用
+    loader = SimpleDirectoryReader(
+        input_dir = './data', 
+        required_exts=[".pdf"],
+        file_extractor={".pdf": PDFReader()} # PDFReaderをインスタンス化
+    )
+    # TypeErrorを回避するため、並列処理を無効にしてファイルを読み込む
+    documents = loader.load_data(num_workers=0)
     return documents
+
+# ... main関数内で documents = read_files_with_table_support() に変更 ...
 
 
 def build_and_query_index(documents):
@@ -31,7 +53,7 @@ def build_and_query_index(documents):
     query_engine = index.as_query_engine()
 
     # 質問
-    response = query_engine.query("この明細が送られている施設名は何か")
+    response = query_engine.query("宿泊施設ID 12214824の全期間における合計宿泊料金を算出して")
     print("\n--- RAGによる回答 ---")
     print(response)
     print("----------------------")
@@ -69,7 +91,8 @@ def main():
     if not os.path.exists(PERSIST_DIR):
         print(f"{PERSIST_DIR}が見つかりません。新規インデックスを構築します。")
         # インデックス構築
-        documents = read_files()
+        # documents = read_files()
+        documents = read_files_with_table_support()
         build_and_query_index(documents)
     else:
         print(f"{PERSIST_DIR}が見つかりました。保存されたインデックスをロードします。")
