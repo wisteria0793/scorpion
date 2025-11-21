@@ -1,3 +1,4 @@
 # backend
 ./backend/venv
 ./backend/.env
+./backend/db/sqlite3

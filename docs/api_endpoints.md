@@ -20,6 +20,7 @@
   - **説明:** 全ての施設リストを取得
 - `POST /api/facilities/`
   - **説明:** 新しい施設を作成
+  - **リクエストボディ例:** `{ "name": "新しい施設", "room_id": 101, "capacity": 4, "management_type": "company" }`
 - `GET /api/facilities/{id}/`
   - **説明:** 特定の施設の詳細を取得
 - `PUT /api/facilities/{id}/`
@@ -27,17 +28,31 @@
 - `DELETE /api/facilities/{id}/`
   - **説明:** 特定の施設を削除
 
+- `POST /api/facilities/{id}/images/`
+  - **説明:** 特定の施設に新しい画像をアップロードする
+  - **リクエストボディ:** (画像データ) と `{ "order": 3 }`
+- `PUT /api/facilities/{id}/images/`
+  - **説明:** 特定の施設の画像リスト（特に表示順）をまとめて更新する
+  - **リクエストボディ:** `[{ "id": 1, "order": 1 }, { "id": 2, "order": 2 }]`
+- `DELETE /api/facilities/{id}/images/{image_id}/`
+  - **説明:** 特定の画像を削除する
+
 ### 予約 (`/api/reservations/`)
 - `GET /api/reservations/`
-  - **説明:** 予約リストを取得 (日付、施設などでフィルタ可能)
-  - **クエリパラメータ例:** `?facility_id=1&start_date=2026-04-01&end_date=2026-04-30`
-- `POST /api/reservations/`
-  - **説明:** 新しい予約を作成
+  - **説明:** 予約リストを取得 (日付、施設、支払い状況などでフィルタ可能)
+  - **クエリパラメータ例:** `?facility_id=1&tax_status=pending`
 - `GET /api/reservations/{id}/`
   - **説明:** 特定の予約の詳細を取得
 - `PATCH /api/reservations/{id}/`
-  - **説明:** 特定の予約情報を部分的に更新 (例: 支払い状況の変更)
-  - **リクエストボディ例:** `{ "payment_status": "paid" }`
+  - **説明:** 特定の予約情報を部分的に更新 (例: 管理者によるステータス変更)
+- `POST /api/reservations/{id}/pay-tax/`
+  - **説明:** 特定の予約の宿泊税支払いセッションを作成し、決済URLを返す
+  - **レスポンス:** `{ "payment_url": "https://checkout.stripe.com/..." }`
+
+### 同期 (`/api/sync/`)
+- `POST /api/sync/reservations/`
+  - **説明:** Beds24等の外部サービスから予約情報を強制的に同期する
+  - **レスポンス:** `{ "status": "success", "created": 10, "updated": 5 }`
 
 ### ダッシュボード (`/api/dashboard/`)
 - `GET /api/dashboard/sales/`

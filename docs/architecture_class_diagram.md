@@ -47,7 +47,9 @@ classDiagram
         <<Model>>
         +id: int
         +name: varchar
+        +room_id: int
         +capacity: int
+        +management_type: varchar
         +...
     }
     class FacilitySerializer {
@@ -94,12 +96,26 @@ classDiagram
         +serializer_class = AmenitySerializer
     }
 
+    %% FacilityImage Resource
+    class FacilityImage {
+        <<Model>>
+        +id: int
+        +facility_id: FK
+        +image_url: text
+        +order: int
+    }
+    class FacilityImageSerializer {
+        <<Serializer>>
+        +Meta.model = FacilityImage
+    }
+    ' Note: FacilityImageViewSet is often nested under FacilityViewSet
 
     %% Relationships
     User --|> Model
     Facility --|> Model
     Reservation --|> Model
     Amenity --|> Model
+    FacilityImage --|> Model
 
     UserViewSet --|> ModelViewSet
     FacilityViewSet --|> ModelViewSet
@@ -110,6 +126,7 @@ classDiagram
     FacilitySerializer --|> ModelSerializer
     ReservationSerializer --|> ModelSerializer
     AmenitySerializer --|> ModelSerializer
+    FacilityImageSerializer --|> ModelSerializer
 
     UserViewSet ..> UserSerializer : uses
     UserViewSet ..> User : manages
@@ -118,6 +135,7 @@ classDiagram
     FacilityViewSet ..> FacilitySerializer : uses
     FacilityViewSet ..> Facility : manages
     FacilitySerializer ..> Facility : serializes
+    FacilitySerializer "1" -- "many" FacilityImageSerializer : nests
 
     ReservationViewSet ..> ReservationSerializer : uses
     ReservationViewSet ..> Reservation : manages
@@ -127,5 +145,6 @@ classDiagram
     AmenityViewSet ..> Amenity : manages
     AmenitySerializer ..> Amenity : serializes
 
+    Facility "1" -- "many" FacilityImage : has
     Reservation "1" -- "1" Facility : is for
 ```

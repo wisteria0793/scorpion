@@ -13,6 +13,7 @@
 - `id` (PK, int) - 主キー
 - `name` (varchar) - 施設名
 - `beds24_property_key` (int, unique) - Beds24のプロパティキー
+- `room_id` (int, unique) - 部屋ID
 - `address` (varchar) - 住所
 - `capacity` (int) - 最大収容人数
 - `num_parking` (int) - 駐車台数
@@ -20,6 +21,7 @@
 - `check_in_time` (time) - チェックイン時刻
 - `check_out_time` (time) - チェックアウト時刻
 - `description` (text) - 施設説明
+- `management_type` (varchar) - 管理形態 (例: "company", "consigned")
 - `created_at` (datetime) - 登録日時
 - `updated_at` (datetime) - 更新日時
 
@@ -68,6 +70,7 @@ erDiagram
         int id PK
         varchar name
         int beds24_property_key
+        int room_id
         varchar address
         int capacity
         int num_parking
@@ -75,6 +78,7 @@ erDiagram
         time check_in_time
         time check_out_time
         text description
+        varchar management_type
         datetime created_at
         datetime updated_at
     }
