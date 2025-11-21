@@ -26,26 +26,9 @@
 - 特定の日に対し、宿泊の可否を設定可能にする
 
 ## データベース設計
-- facility_db
-    - facility_name (text)
-    - facility_id(Beds24 property key) (int)
-    - address (text)
-    - capacity (int)
-    - num_parking (int)
-    - google_map_url (url)
-    - check-in_time (int)
-    - check-out_time (int)
-    - description (text)
-    - List[amenities] ()
-    - images
+詳細なデータベース設計（テーブル定義、ER図）は以下のファイルで管理しています。
 
-- amenities_db
-    - item (text)
-
-- facility_images
-    - image_url (url)
-     
-- reservationList_db
+- [データベース設計](./docs/database_design.md)
 
 ## APIエンドポイント
 
