@@ -31,6 +31,8 @@
 - [**データベース設計**](./docs/database_design.md) - テーブル定義、ER図
 - [**APIエンドポイント**](./docs/api_endpoints.md) - APIの仕様
 - [**アーキテクチャ (クラス図)**](./docs/architecture_class_diagram.md) - バックエンドのクラス構成
+- [**予約ステートマシン図**](./docs/reservation_state_diagram.md) - 予約のライフサイクル
+- [**シーケンス図**](./docs/sequence_diagrams.md) - 主要機能の処理フロー
 - [**開発ガイドライン**](./docs/development_guidelines.md) - コーディング規約など
 
 
