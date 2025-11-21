@@ -1,4 +1,4 @@
-# 民泊業務管理ツールの開発
+# 民泊業務管理サイトの開発
 
 ## 目的
 - 現在、webサイトやスマートチェックインシステムに掲載している情報が個別で管理されているため、施設情報等を一元管理
@@ -9,9 +9,8 @@
 
 
 ## 開発環境
-- フロントエンド: Reactを検討
-- バックエンド: Django or Ruby on Railsを検討
-    - すでにDjangoを用いて、webサイトやチェックインシステムのバックエンドを開発したため、ほかの技術を身につけるため、RoRを使用しようと検討している
+- フロントエンド: React
+- バックエンド: Django
 - 通知機能: Slack API(チェックイン・アウトの即時通知、当日の予約管理、新規予約の通知、宿泊税の支払い通知など)
 - サーバ: Xサーバ VPS(すでに利用しているため)
 
@@ -19,9 +18,111 @@
 - 現時点(2025.11.21) ~ 2026.03.31をめどに開発
 
 ## 機能一覧
+- ログイン・ユーザ登録
+- 年度売り上げ状況、月刊売り上げ状況の可視化
+- 施設情報登録・変更・削除
+- GCPのスプレッドシートに関するAPIから、宿泊者名簿の取得
+- Stripeの決済成立を確認し、宿泊予約に宿泊税の支払い状況・名簿提出状況を連携・確認
+- 特定の日に対し、宿泊の可否を設定可能にする
+
+## データベース設計
+- facility_db
+    - facility_name (text)
+    - facility_id(Beds24 property key) (int)
+    - address (text)
+    - capacity (int)
+    - num_parking (int)
+    - google_map_url (url)
+    - check-in_time (int)
+    - check-out_time (int)
+    - description (text)
+    - List[amenities] ()
+    - images
+
+- amenities_db
+    - item (text)
+
+- facility_images
+    - image_url (url)
+     
+- reservationList_db
+
+## APIエンドポイント
+
 
 ## セットアップ手順
 
-## データベース設計
+### フロントエンド (React)
 
-## APIエンドポイント
+1.  **Node.jsのバージョン設定**
+    `frontend`ディレクトリに移動し、Node Version Manager (`nvm`) を使って、プロジェクトで指定されたNode.jsのバージョンに切り替えます。
+    ```bash
+    cd frontend
+    nvm use
+    ```
+    `.nvmrc`ファイルが使われるべきバージョンを自動的に読み込みます。もし該当バージョンがインストールされていない場合、`nvm install`を実行するよう`nvm`が指示してくれます。
+
+2.  **依存関係のインストール**
+    `npm`を使って必要なパッケージをインストールします。
+    ```bash
+    npm install
+    ```
+
+3.  **開発サーバーの起動**
+    ```bash
+    npm run dev
+    ```
+    サーバーが起動したら、コンソールに表示される `http://localhost:xxxx` のアドレスにブラウザでアクセスしてください。
+
+---
+
+### バックエンド (Django)
+
+macOSでの環境構築手順です。
+
+1.  **Pythonのバージョン管理 (`pyenv`)**
+    `pyenv`がインストールされていない場合は、Homebrewでインストールすることを推奨します。
+    ```bash
+    brew install pyenv
+    ```
+    シェルの設定ファイル（`.zshrc`など）に初期化スクリプトを追加してください。
+    ```bash
+    echo 'eval "$(pyenv init -)"' >> ~/.zshrc
+    ```
+
+2.  **Pythonのインストール**
+    プロジェクトのルートディレクトリに移動し、`.python-version`ファイルに記載されたPythonをインストールします。
+    ```bash
+    # (プロジェクトのルートディレクトリで実行)
+    pyenv install
+    ```
+
+3.  **仮想環境の作成と有効化**
+    `backend`ディレクトリに移動し、`venv`という名前の仮想環境を作成して有効化（アクティベート）します。
+    ```bash
+    cd backend
+    python -m venv venv
+    source venv/bin/activate
+    ```
+    これ以降のコマンドは、仮想環境が有効化された状態（プロンプトの先頭に`(venv)`と表示された状態）で実行してください。
+
+4.  **依存関係のインストール**
+    `pip`を使ってDjangoをインストールします。
+    ```bash
+    pip install django
+    ```
+
+5.  **データベースの初期化**
+    以下のコマンドでデータベースを作成します。（初回のみ）
+    ```bash
+    python manage.py migrate
+    ```
+
+6.  **開発サーバーの起動**
+    以下のコマンドで開発サーバーを起動します。
+    ```bash
+    python manage.py runserver
+    ```
+    起動後、ブラウザで `http://localhost:8000` にアクセスすると、Djangoのデフォルトページが表示されます。 
+
+
