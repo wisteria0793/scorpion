@@ -129,4 +129,3 @@ sequenceDiagram
     Stripe->>User: 決済完了を通知
     User->>Frontend: 支払い完了ページにリダイレクトされる
 ```
-

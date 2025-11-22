@@ -42,11 +42,24 @@ class FormField(models.Model):
     def __str__(self):
         return f"{self.form_template.get('ja', str(self.form_template))} - {self.label.get('ja', str(self.label))}"
 
+class Amenity(models.Model):
+    """
+    アメニティ情報。
+    """
+    name = models.CharField(max_length=255, unique=True, verbose_name="アメニティ名")
+
+    class Meta:
+        verbose_name = "アメニティ"
+        verbose_name_plural = "アメニティ"
+
+    def __str__(self):
+        return self.name
+
 class Property(models.Model):
     name = models.CharField(max_length=255, verbose_name="施設名")
     slug = models.SlugField(unique=True, verbose_name="URL識別子", help_text="例: 'villa-sakura'")
     form_template = models.ForeignKey(FormTemplate, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="フォームテンプレート")
-    beds24_property_key = models.IntegerField(unique=True, null=True, blank=True, verbose_name="Beds24プロパティキー")
+    beds24_property_key = models.CharField(max_length=255, unique=True, null=True, blank=True, verbose_name="Beds24プロパティキー")
     room_id = models.IntegerField(unique=True, null=True, blank=True, verbose_name="部屋ID")
     address = models.CharField(max_length=255, null=True, blank=True, verbose_name="住所")
     capacity = models.IntegerField(default=0, verbose_name="最大収容人数")
@@ -56,6 +69,7 @@ class Property(models.Model):
     check_out_time = models.TimeField(null=True, blank=True, verbose_name="チェックアウト時刻")
     description = models.TextField(blank=True, verbose_name="施設説明")
     management_type = models.CharField(max_length=50, null=True, blank=True, verbose_name="管理形態")
+    amenities = models.ManyToManyField(Amenity, related_name='properties', blank=True, verbose_name="アメニティ") # ManyToManyFieldを追加
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="作成日時")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="更新日時")
 
@@ -65,6 +79,22 @@ class Property(models.Model):
 
     def __str__(self):
         return self.name
+
+class FacilityImage(models.Model):
+    """
+    施設画像情報。
+    """
+    property = models.ForeignKey(Property, on_delete=models.CASCADE, related_name='images', verbose_name="施設")
+    image_url = models.URLField(max_length=2000, verbose_name="画像URL") # URLFieldに変更
+    order = models.PositiveIntegerField(default=0, verbose_name="表示順")
+
+    class Meta:
+        verbose_name = "施設画像"
+        verbose_name_plural = "施設画像"
+        ordering = ['order']
+
+    def __str__(self):
+        return f"{self.property.name} - Image {self.order}"
 
 class Reservation(models.Model):
     class RosterStatus(models.TextChoices):

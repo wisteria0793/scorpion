@@ -14,7 +14,7 @@
 - `name` (varchar) - 施設名
 - `slug` (varchar, unique) - URL用の識別子 (例: "villa-sakura")
 - `form_template_id` (FK, int) -> `form_templates.id` - この施設が使用するフォームテンプレート
-- `beds24_property_key` (int, unique) - Beds24のプロパティキー
+- `beds24_property_key` (varchar, unique) - Beds24のプロパティキー
 - `room_id` (int, unique) - 部屋ID
 - `address` (varchar) - 住所
 - `capacity` (int) - 最大収容人数
@@ -40,6 +40,7 @@
 - `id` (PK, int) - 主キー
 - `facility_id` (FK, int) -> `facilities.id`
 - `image_url` (text) - 画像のURL
+- `caption` (json) - 画像のキャプション (多言語対応。例: `{"ja": "リビングルーム", "en": "Living Room"}`)
 - `order` (int) - 画像の表示順
 
 ### reservations
@@ -99,7 +100,7 @@ erDiagram
         varchar name
         varchar slug
         int form_template_id FK
-        int beds24_property_key
+        varchar beds24_property_key
         int room_id
         varchar address
         int capacity
@@ -125,6 +126,7 @@ erDiagram
         int id PK
         int facility_id FK
         text image_url
+        json caption
         int order
     }
     facility_amenities {
@@ -167,4 +169,3 @@ erDiagram
     reservations ||--|| guest_submissions : "has one"
 
 ```
-

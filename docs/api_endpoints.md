@@ -30,7 +30,7 @@
 
 - `POST /api/facilities/{id}/images/`
   - **説明:** 特定の施設に新しい画像をアップロードする
-  - **リクエストボディ:** (画像データ) と `{ "order": 3 }`
+  - **リクエストボディ (multipart/form-data):** 画像ファイルと、キャプションや表示順を含むJSONデータ。例: `image` (ファイル), `data` (`{ "caption": {"ja": "新しい画像"}, "order": 3 }`)
 - `PUT /api/facilities/{id}/images/`
   - **説明:** 特定の施設の画像リスト（特に表示順）をまとめて更新する
   - **リクエストボディ:** `[{ "id": 1, "order": 1 }, { "id": 2, "order": 2 }]`

@@ -102,6 +102,7 @@ classDiagram
         +id: int
         +facility_id: FK
         +image_url: text
+        +caption: json
         +order: int
     }
     class FacilityImageSerializer {
