@@ -60,16 +60,16 @@
 ### 動的フォーム関連モデル
 #### form_templates
 - `id` (PK, int) - 主キー
-- `name` (varchar) - テンプレート名 (例: "A施設用フォーム")
+- `name` (json) - テンプレート名 (多言語対応。例: `{"ja": "A施設用フォーム", "en": "Form for Facility A"}`)
 - `created_at` (datetime) - 登録日時
 - `updated_at` (datetime) - 更新日時
 
 #### form_fields
 - `id` (PK, int) - 主キー
 - `form_template_id` (FK, int) -> `form_templates.id`
-- `label` (varchar) - 質問文 (例: "お名前")
+- `label` (json) - 質問文 (多言語対応。例: `{"ja": "お名前", "en": "Full Name"}`)
 - `field_type` (varchar) - 入力形式 (例: "text", "email", "date", "file", "radio")
-- `options` (json) - 選択肢 (radioなどの場合)
+- `options` (json) - 選択肢 (多言語対応。例: `{"ja": ["選択肢1", "選択肢2"], "en": ["Option1", "Option2"]}`)
 - `is_required` (boolean) - 必須項目か
 - `order` (int) - 表示順
 
@@ -134,14 +134,14 @@ erDiagram
     }
     form_templates {
         int id PK
-        varchar name
+        json name
         datetime created_at
         datetime updated_at
     }
     form_fields {
         int id PK
         int form_template_id FK
-        varchar label
+        json label
         varchar field_type
         json options
         boolean is_required
