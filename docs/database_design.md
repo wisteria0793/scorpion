@@ -12,6 +12,8 @@
 ### facilities
 - `id` (PK, int) - 主キー
 - `name` (varchar) - 施設名
+- `slug` (varchar, unique) - URL用の識別子 (例: "villa-sakura")
+- `form_template_id` (FK, int) -> `form_templates.id` - この施設が使用するフォームテンプレート
 - `beds24_property_key` (int, unique) - Beds24のプロパティキー
 - `room_id` (int, unique) - 部屋ID
 - `address` (varchar) - 住所
@@ -55,6 +57,32 @@
 - `created_at` (datetime) - 登録日時
 - `updated_at` (datetime) - 更新日時
 
+### 動的フォーム関連モデル
+#### form_templates
+- `id` (PK, int) - 主キー
+- `name` (varchar) - テンプレート名 (例: "A施設用フォーム")
+- `created_at` (datetime) - 登録日時
+- `updated_at` (datetime) - 更新日時
+
+#### form_fields
+- `id` (PK, int) - 主キー
+- `form_template_id` (FK, int) -> `form_templates.id`
+- `label` (varchar) - 質問文 (例: "お名前")
+- `field_type` (varchar) - 入力形式 (例: "text", "email", "date", "file", "radio")
+- `options` (json) - 選択肢 (radioなどの場合)
+- `is_required` (boolean) - 必須項目か
+- `order` (int) - 表示順
+
+#### guest_submissions
+- `id` (PK, int) - 主キー
+- `reservation_id` (FK, int) -> `reservations.id`
+- `token` (varchar, unique) - フォームアクセス用の一時トークン
+- `submitted_data` (json) - ゲストが入力したデータ
+- `status` (varchar) - 提出状況 (例: "pending", "completed")
+- `created_at` (datetime) - 登録日時
+- `updated_at` (datetime) - 更新日時
+
+
 ## ER図 (Mermaid)
 ```mermaid
 erDiagram
@@ -69,16 +97,12 @@ erDiagram
     facilities {
         int id PK
         varchar name
+        varchar slug
+        int form_template_id FK
         int beds24_property_key
         int room_id
         varchar address
         int capacity
-        int num_parking
-        text google_map_url
-        time check_in_time
-        time check_out_time
-        text description
-        varchar management_type
         datetime created_at
         datetime updated_at
     }
@@ -89,11 +113,7 @@ erDiagram
         varchar guest_email
         date check_in_date
         date check_out_date
-        int num_guests
-        decimal total_price
-        varchar payment_status
         varchar guest_roster_status
-        varchar accommodation_tax_status
         datetime created_at
         datetime updated_at
     }
@@ -112,9 +132,39 @@ erDiagram
         int facility_id FK
         int amenity_id FK
     }
+    form_templates {
+        int id PK
+        varchar name
+        datetime created_at
+        datetime updated_at
+    }
+    form_fields {
+        int id PK
+        int form_template_id FK
+        varchar label
+        varchar field_type
+        json options
+        boolean is_required
+        int order
+    }
+    guest_submissions {
+        int id PK
+        int reservation_id FK
+        varchar token
+        json submitted_data
+        varchar status
+        datetime created_at
+        datetime updated_at
+    }
 
     facilities ||--o{ reservations : "has"
-    facilities ||--o{ facility_images : "has"
+    facilities ||--|{ form_templates : "uses"
     facilities }o--o{ facility_amenities : "links to"
     amenities }o--o{ facility_amenities : "links to"
+    facilities ||--o{ facility_images : "has"
+    
+    form_templates ||--o{ form_fields : "contains"
+    reservations ||--|| guest_submissions : "has one"
+
 ```
+

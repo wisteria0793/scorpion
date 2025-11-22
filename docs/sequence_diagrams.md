@@ -2,7 +2,59 @@
 
 このドキュメントは、システムの主要な機能（ユースケース）における、コンポーネント間のインタラクションを時系列で示します。
 
-## 1. 予約情報 同期フロー
+## 1. 宿泊者名簿 提出フロー (新)
+
+ゲストが施設ごとの専用リンクからアクセスし、宿泊者名簿を提出するシナリオ。
+
+```mermaid
+sequenceDiagram
+    actor Guest
+    participant Frontend as React App
+    participant Backend as Django API
+
+    Guest->>Frontend: 施設ごとの専用URLにアクセス
+    activate Frontend
+    Frontend->>Guest: 予約検索ページを表示 (入力はチェックイン日のみ)
+
+    Guest->>Frontend: チェックイン日を入力し、「次へ」をクリック
+    Frontend->>Backend: POST /api/check-in/{facility_slug}/ <br> { check_in_date: "..." }
+    activate Backend
+
+    Backend->>Backend: DBで施設とチェックイン日に合う予約を検索
+    alt 予約が存在する場合
+        Backend->>Backend: GuestSubmissionレコードを作成し、<br>ユニークなトークンを発行
+        Backend-->>Frontend: { token: "..." }
+    else 予約が存在しない場合
+        Backend-->>Frontend: 404 Not Found
+    end
+    deactivate Backend
+
+    alt 予約成功
+        Frontend->>Backend: GET /api/guest-forms/{token}/
+        activate Backend
+        Backend->>Backend: トークンを検証し、<br>施設に紐づくフォーム定義をDBから取得
+        Backend-->>Frontend: フォーム定義 (JSON)
+        deactivate Backend
+
+        Frontend->>Frontend: JSONを元にフォームを動的に描画
+        Frontend->>Guest: 宿泊者名簿フォームを表示
+
+        Guest->>Frontend: フォームに情報を入力し、「提出」をクリック
+        Frontend->>Backend: POST /api/guest-forms/{token}/ <br> (フォームデータ)
+        activate Backend
+
+        Backend->>Backend: DBに提出内容を保存し、<br>予約のステータスを「提出済」に更新
+        Backend-->>Frontend: 201 Created
+        deactivate Backend
+
+        Frontend->>Guest: 「ご提出ありがとうございました」画面を表示
+    else 予約失敗
+        Frontend->>Guest: エラーメッセージを表示
+    end
+    deactivate Frontend
+```
+
+## 2. 予約情報 同期フロー
 
 Beds24等の外部予約サイトから予約情報を取得し、ローカルのデータベースを更新するシナリオです。管理者が手動で実行、またはシステムが定期的に自動実行することを想定しています。
 
@@ -34,7 +86,7 @@ sequenceDiagram
     deactivate Backend
 ```
 
-## 2. 宿泊税 支払いフロー
+## 3. 宿泊税 支払いフロー
 
 ユーザーが特定の予約に対する宿泊税を支払うシナリオです。
 
@@ -78,41 +130,3 @@ sequenceDiagram
     User->>Frontend: 支払い完了ページにリダイレクトされる
 ```
 
-## 3. 宿泊者名簿の連携フロー
-
-管理者が名簿の提出状況を確認し、Google スプレッドシートから情報を取得するシナリオです。
-
-```mermaid
-sequenceDiagram
-    actor Admin
-    participant Frontend as React App
-    participant Backend as Django API
-    participant Google as Google Sheets API
-
-    Admin->>Frontend: 管理画面で「名簿情報更新」をクリック
-    activate Frontend
-
-    Frontend->>Backend: POST /api/guest-rosters/sync/
-    activate Backend
-
-    Backend->>Google: 認証 (OAuth 2.0)
-    activate Google
-    Google-->>Backend: アクセストークン
-    deactivate Google
-
-    Backend->>Google: スプレッドシートのデータを要求 (get_spreadsheet_data)
-    activate Google
-    Google-->>Backend: 名簿データ (JSON)
-    deactivate Google
-
-    Backend->>Backend: 取得した名簿データと<br>DBの予約情報を照合
-    loop for each reservation
-        Backend->>Backend: 予約の`guest_roster_status`を<br>「pending」から「submitted」に更新
-    end
-
-    Backend-->>Frontend: { "status": "success", "updated_count": 5 }
-    deactivate Backend
-
-    Frontend->>Admin: 「5件の名簿情報が更新されました」と表示
-    deactivate Frontend
-```

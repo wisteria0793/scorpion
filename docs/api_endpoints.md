@@ -49,6 +49,32 @@
   - **説明:** 特定の予約の宿泊税支払いセッションを作成し、決済URLを返す
   - **レスポンス:** `{ "payment_url": "https://checkout.stripe.com/..." }`
 
+### 宿泊者名簿提出 (`/api/guest-forms/`)
+- `POST /api/check-in/{facility_slug}/`
+  - **説明:** 施設ごとの名簿提出ページで、予約を検索・特定する。
+  - **リクエストボディ:** `{ "check_in_date": "2026-05-10" }`
+  - **レスポンス (成功):** `{ "token": "一時的な一意のトークン" }`
+  - **レスポンス (失敗):** `404 Not Found`
+
+- `GET /api/guest-forms/{submission_token}/`
+  - **説明:** 予約特定後に、表示すべきフォームの定義(質問リスト)を取得する。
+  - **レスポンス:** 
+    ```json
+    {
+      "form_title": "A施設 ご宿泊者名簿",
+      "fields": [
+        { "label": "代表者名", "field_type": "text", "is_required": true },
+        { "label": "国籍", "field_type": "radio", "options": ["日本国籍", "外国籍"], "is_required": true },
+        { "label": "パスポート", "field_type": "file", "is_required": true, "condition": {"field": "国籍", "value": "外国籍"} }
+      ]
+    }
+    ```
+
+- `POST /api/guest-forms/{submission_token}/`
+  - **説明:** ゲストが入力したフォームの情報を送信・保存する。
+  - **リクエストボディ:** `multipart/form-data` 形式で、フォームの入力内容を送信。
+  - **レスポンス:** `201 Created`
+
 ### 同期 (`/api/sync/`)
 - `POST /api/sync/reservations/`
   - **説明:** Beds24等の外部サービスから予約情報を強制的に同期する
