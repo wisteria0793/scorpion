@@ -26,7 +26,7 @@ function RevenuePage() {
     // 初期表示用の年度リストを設定
     useEffect(() => {
         const currentYear = getCurrentFiscalYear();
-        setAvailableYears([currentYear, currentYear - 1, currentYear - 2]);
+        setAvailableYears([currentYear, currentYear - 1, currentYear - 2, currentYear - 3]);
     }, []);
 
     // 選択された年度や施設が変わったらデータを再取得
@@ -49,7 +49,9 @@ function RevenuePage() {
             }
         };
 
-        loadData();
+        if (selectedYear) {
+            loadData();
+        }
     }, [selectedYear, selectedProperty]);
 
     // グラフ用にデータを整形・ソート
@@ -78,6 +80,7 @@ function RevenuePage() {
             const keys = new Set();
             monthlyData.forEach(month => {
                 Object.keys(month).forEach(key => {
+                    // 予約語キーを除外して施設名のみを抽出
                     if (key !== 'date' && key !== 'name' && key !== 'total' && key !== 'revenue') {
                         keys.add(key);
                     }
@@ -88,7 +91,7 @@ function RevenuePage() {
         return [];
     }, [monthlyData]);
 
-    const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
+    const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#a4de6c', '#d0ed57', '#ffc658'];
 
     return (
         <div className="revenue-page">
@@ -156,6 +159,7 @@ function RevenuePage() {
                                         name="総売上" 
                                         stroke="#ff7300" 
                                         strokeWidth={2}
+                                        dot={false}
                                     />
                                 </>
                             ) : (
