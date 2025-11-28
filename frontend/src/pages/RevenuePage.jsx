@@ -66,7 +66,7 @@ function RevenuePage() {
                 setMonthlyData(data); // 初期表示用に取得したデータをセット
                 
                 // 施設リストはハードコードで対応 (将来的にAPIから取得が理想)
-                setAvailableProperties(['巴.com', 'ONE PIECE HOUSE', '巴.com 3', '巴.com 5 Cafe&Stay', '巴.com プレミアムステイ', 'Guest house 巴.com hakodate motomachi']);
+                setAvailableProperties(['巴.com', 'ONE PIECE HOUSE', '巴.com3 Music&Stay', '巴.com5 Cafe&Stay', '巴.com プレミアムステイ', '巴.com motomachi']);
                 
             } catch (err) {
                 console.error("Failed to fetch initial data", err);

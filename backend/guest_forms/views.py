@@ -160,6 +160,7 @@ class RevenueAPIView(APIView):
 
             response_data = self._format_for_stacked_chart(monthly_by_type, start_date, end_date)
 
+        print(f"DEBUG: property_name='{property_name}', response_data={response_data}")
         return Response(response_data)
 
     def _format_for_single_property(self, monthly_totals, start_date, end_date):
