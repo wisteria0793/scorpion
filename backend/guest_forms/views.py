@@ -108,49 +108,63 @@ class GuestFormSubmitView(APIView):
 import calendar
 from datetime import date, timedelta
 
+from django.db.models import Sum
+from django.db.models.functions import TruncMonth
+
 class RevenueAPIView(APIView):
     """
-    指定された会計年度と施設（任意）の月別売上データを集計して提供するAPIビュー
+    ローカルDBに保存された予約データから、月別売上レポートを生成するAPIビュー。
     会計年度は3月から翌年2月までとする。
     """
-
     def get(self, request, *args, **kwargs):
         try:
-            # フロントエンドから渡される「年度」は、会計年度の開始年とする (例: 2025年度は2025)
-            selected_year = int(request.query_params.get('year', date.today().year))
+            today = date.today()
+            default_year = today.year - 1 if today.month < 3 else today.year
+            selected_year = int(request.query_params.get('year', default_year))
         except (ValueError, TypeError):
-            selected_year = date.today().year
+            selected_year = default_year
 
         property_name = request.query_params.get('property_name')
 
-        # 会計年度の開始日と終了日を決定 (例: 2025年度 -> 2025-03-01 ~ 2026-02-28/29)
+        # 会計年度の開始日と終了日を決定
         start_date = date(selected_year, 3, 1)
-        end_of_feb_next_year = date(selected_year + 1, 3, 1) - timedelta(days=1)
-        end_date = end_of_feb_next_year
+        end_date = (date(selected_year + 1, 3, 1) - timedelta(days=1))
 
-        raw_data = get_revenue_data(start_date, end_date)
+        # ベースとなるクエリセットを作成
+        queryset = Reservation.objects.filter(
+            check_in_date__range=(start_date, end_date),
+            status__in=['Confirmed', 'New'] # 集計対象とするステータス
+        )
 
-        if raw_data is None:
-            return Response({"error": "Beds24 APIからのデータ取得に失敗しました。"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
+        # 特定の施設が指定されていれば、それでフィルタリング
         if property_name:
-            # 特定の施設が指定されている場合
-            filtered_data = {p_name: year_data for p_name, year_data in raw_data.items() if p_name == property_name}
-            response_data = self._format_for_single_property(filtered_data, start_date, end_date)
+            queryset = queryset.filter(property__name=property_name)
+
+        # 全施設か単一施設かで返すデータ形式を変える
+        if property_name:
+            # 単一施設: 月ごとの合計売上を返す
+            monthly_totals = queryset.annotate(
+                month=TruncMonth('check_in_date')
+            ).values('month').annotate(
+                total=Sum('total_price')
+            ).order_by('month')
+            
+            response_data = self._format_for_single_property(monthly_totals, start_date, end_date)
         else:
-            # 全施設の場合（積み上げグラフ用のデータ形式）
-            response_data = self._format_for_stacked_chart(raw_data, start_date, end_date)
+            # 全施設: 施設ごとの月別売上を返す (積み上げグラフ用)
+            monthly_by_prop = queryset.annotate(
+                month=TruncMonth('check_in_date')
+            ).values('month', 'property__name').annotate(
+                total=Sum('total_price')
+            ).order_by('month', 'property__name')
+
+            response_data = self._format_for_stacked_chart(monthly_by_prop, start_date, end_date)
 
         return Response(response_data)
 
-    def _format_for_single_property(self, data, start_date, end_date):
-        """単一施設（または全施設の合算）の月別データを整形"""
-        monthly_revenue = defaultdict(int)
-        for facility_name, year_data in data.items():
-            for year, month_data in year_data.items():
-                for month, revenue in month_data.items():
-                     # yearとmonthを組み合わせたキーで集計
-                    monthly_revenue[f"{year}-{str(month).zfill(2)}"] += revenue
+    def _format_for_single_property(self, monthly_totals, start_date, end_date):
+        """月別合計のクエリセットを、12ヶ月分のデータに整形する"""
+        revenue_map = {item['month'].strftime('%Y-%m'): item['total'] for item in monthly_totals}
         
         result = []
         current_date = start_date
@@ -158,49 +172,37 @@ class RevenueAPIView(APIView):
             date_key = current_date.strftime('%Y-%m')
             result.append({
                 "date": date_key,
-                "revenue": monthly_revenue.get(date_key, 0)
+                "revenue": revenue_map.get(date_key, 0) or 0
             })
             # 次の月へ
-            next_month = current_date.month + 1
-            next_year = current_date.year
-            if next_month > 12:
-                next_month = 1
-                next_year += 1
+            next_month = current_date.month % 12 + 1
+            next_year = current_date.year + (1 if current_date.month == 12 else 0)
             current_date = date(next_year, next_month, 1)
-            
         return result
 
-    def _format_for_stacked_chart(self, data, start_date, end_date):
-        """積み上げ棒グラフ用に、施設名をキーにした月別データを整形し、合計も追加"""
+    def _format_for_stacked_chart(self, monthly_by_prop, start_date, end_date):
+        """施設ごとの月別クエリセットを、積み上げグラフ用の形式に整形する"""
         pivoted_data = defaultdict(lambda: defaultdict(int))
-        for facility_name, year_data in data.items():
-            for year, month_data in year_data.items():
-                for month, revenue in year_data[year].items():
-                    date_key = f"{year}-{str(month).zfill(2)}"
-                    pivoted_data[date_key][facility_name] = revenue
-        
+        for item in monthly_by_prop:
+            date_key = item['month'].strftime('%Y-%m')
+            prop_name = item['property__name']
+            pivoted_data[date_key][prop_name] = item['total'] or 0
+
         result = []
         current_date = start_date
         while current_date <= end_date:
             date_key = current_date.strftime('%Y-%m')
             month_data = {"date": date_key}
-            
-            # 月ごとの施設別売上と合計を計算
             details = pivoted_data.get(date_key, {})
             total = sum(details.values())
             month_data.update(details)
             month_data['total'] = total
-            
             result.append(month_data)
 
             # 次の月へ
-            next_month = current_date.month + 1
-            next_year = current_date.year
-            if next_month > 12:
-                next_month = 1
-                next_year += 1
+            next_month = current_date.month % 12 + 1
+            next_year = current_date.year + (1 if current_date.month == 12 else 0)
             current_date = date(next_year, next_month, 1)
-            
         return result
 
 

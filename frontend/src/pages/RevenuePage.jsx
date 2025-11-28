@@ -9,27 +9,47 @@ import './RevenuePage.css';
 function RevenuePage() {
     const [monthlyData, setMonthlyData] = useState([]);
     const [availableYears, setAvailableYears] = useState([]);
+    const [availableProperties, setAvailableProperties] = useState([]); // 施設リストを永続的に保持
     
-    // 現在の会計年度を計算する関数
     const getCurrentFiscalYear = () => {
         const today = new Date();
-        // 1月, 2月は前年の年度に属する
         return today.getMonth() < 2 ? today.getFullYear() - 1 : today.getFullYear();
     };
 
     const [selectedYear, setSelectedYear] = useState(getCurrentFiscalYear);
-    const [selectedProperty, setSelectedProperty] = useState(''); // '全施設' を示す空文字
+    const [selectedProperty, setSelectedProperty] = useState('');
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
-    // 初期表示用の年度リストを設定
+    // 初期化処理: 利用可能な年度と施設のリストを取得
     useEffect(() => {
         const currentYear = getCurrentFiscalYear();
         setAvailableYears([currentYear, currentYear - 1, currentYear - 2, currentYear - 3]);
+
+        const fetchInitialData = async () => {
+            try {
+                // 全施設のデータを一度取得して、そこから施設リストを生成
+                const initialData = await fetchRevenueData({ year: currentYear, property_name: '' });
+                const keys = new Set();
+                initialData.forEach(month => {
+                    Object.keys(month).forEach(key => {
+                        if (key !== 'date' && key !== 'name' && key !== 'total' && key !== 'revenue') {
+                            keys.add(key);
+                        }
+                    });
+                });
+                setAvailableProperties(Array.from(keys).sort());
+            } catch (err) {
+                console.error("Failed to fetch initial property list", err);
+                setError('施設リストの取得に失敗しました。');
+            }
+        };
+
+        fetchInitialData();
     }, []);
 
-    // 選択された年度や施設が変わったらデータを再取得
+    // フィルター変更時に表示用データを再取得
     useEffect(() => {
         const loadData = async () => {
             setLoading(true);
@@ -58,7 +78,6 @@ function RevenuePage() {
     const chartData = useMemo(() => {
         if (!monthlyData || monthlyData.length === 0) return [];
         
-        // 会計年度（3月始まり）でソート
         const sorted = [...monthlyData].sort((a, b) => {
             const monthA = parseInt(a.date.split('-')[1]);
             const monthB = parseInt(b.date.split('-')[1]);
@@ -69,26 +88,8 @@ function RevenuePage() {
 
         return sorted.map(item => ({
             ...item,
-            // "YYYY-MM" から "M月" 形式に変換
             name: `${parseInt(item.date.split('-')[1])}月`,
         }));
-    }, [monthlyData]);
-    
-    // データから動的に施設リストを生成
-    const propertyOptions = useMemo(() => {
-        if (monthlyData.length > 0) {
-            const keys = new Set();
-            monthlyData.forEach(month => {
-                Object.keys(month).forEach(key => {
-                    // 予約語キーを除外して施設名のみを抽出
-                    if (key !== 'date' && key !== 'name' && key !== 'total' && key !== 'revenue') {
-                        keys.add(key);
-                    }
-                });
-            });
-            return Array.from(keys).sort();
-        }
-        return [];
     }, [monthlyData]);
 
     const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#a4de6c', '#d0ed57', '#ffc658'];
@@ -121,7 +122,7 @@ function RevenuePage() {
                         onChange={(e) => setSelectedProperty(e.target.value)}
                     >
                         <option value="">全施設</option>
-                        {propertyOptions.map(propName => (
+                        {availableProperties.map(propName => (
                             <option key={propName} value={propName}>{propName}</option>
                         ))}
                     </select>
@@ -141,9 +142,8 @@ function RevenuePage() {
                             <Legend />
                             
                             {selectedProperty === '' ? (
-                                // 全施設: 積み上げグラフ + 合計の折れ線グラフ
                                 <>
-                                    {propertyOptions.map((propName, index) => (
+                                    {availableProperties.map((propName, index) => (
                                         <Bar 
                                             key={propName} 
                                             yAxisId="left"
@@ -163,7 +163,6 @@ function RevenuePage() {
                                     />
                                 </>
                             ) : (
-                                // 特定施設: シンプルな棒グラフ
                                 <Bar yAxisId="left" dataKey="revenue" name="売上" fill="#8884d8" />
                             )}
                         </ComposedChart>

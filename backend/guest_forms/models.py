@@ -103,14 +103,14 @@ class Reservation(models.Model):
         VERIFIED = 'verified', '確認済'
 
     # Beds24からの主要なデータ
-    beds24_book_id = models.IntegerField(unique=True, verbose_name="Beds24予約ID", help_text="Beds24の'bookId'")
+    beds24_book_id = models.IntegerField(unique=True, null=True, verbose_name="Beds24予約ID", help_text="Beds24の'bookId'")
     status = models.CharField(max_length=50, verbose_name="予約ステータス", null=True, blank=True, help_text="Beds24の'Status'")
     total_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, verbose_name="合計料金", help_text="Beds24の'Price'")
     
     # 予約に関する詳細情報
     property = models.ForeignKey(Property, on_delete=models.CASCADE, related_name='reservations', verbose_name="施設")
     check_in_date = models.DateField(verbose_name="チェックイン日", help_text="Beds24の'First Night'")
-    check_out_date = models.DateField(verbose_name="チェックアウト日", help_text="Beds24の'Last Night'")
+    check_out_date = models.DateField(null=True, verbose_name="チェックアウト日", help_text="Beds24の'Last Night'")
     num_guests = models.IntegerField(default=1, verbose_name="宿泊者数", help_text="Beds24の'Number of Guests'")
 
     # ゲスト情報
