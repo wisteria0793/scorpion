@@ -1,29 +1,35 @@
-/* src/pages/RevenuePage.css */
+:root {
+    --primary-color: #4f46e5;
+    --text-color-primary: #1f2937;
+    --text-color-secondary: #6b7280;
+    --bg-color: #f9fafb;
+    --card-bg-color: #ffffff;
+    --border-color: #e5e7eb;
+}
 
 .revenue-page {
-    width: 90%;
-    max-width: 1200px;
-    /* margin: 0 auto; */
-    padding: 2rem;
-    font-family: sans-serif;
-    color: #333;
+    background-color: var(--bg-color);
+    padding: 2rem 3rem;
+    min-height: 100vh;
 }
 
 .revenue-page h1 {
-    border-bottom: 2px solid #eee;
-    padding-bottom: 0.5rem;
-    margin-bottom: 1.5rem;
+    font-size: 1.875rem; /* 30px */
+    font-weight: 700;
+    color: var(--text-color-primary);
+    margin-bottom: 2rem;
 }
 
 .filters {
+    background-color: var(--card-bg-color);
+    padding: 1.5rem 2rem;
+    border-radius: 12px;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
     display: flex;
     flex-wrap: wrap;
-    gap: 1.5rem;
+    gap: 2rem;
     align-items: center;
-    background-color: #f9f9f9;
-    padding: 1.5rem;
-    border-radius: 8px;
-    margin-bottom: 2rem;
 }
 
 .filter-group {
@@ -33,92 +39,69 @@
 }
 
 .filter-group label {
-    font-weight: bold;
-    font-size: 0.9rem;
-    color: #555;
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: var(--text-color-secondary);
 }
 
-.filter-group input[type="date"] {
-    padding: 0.5rem;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    font-size: 1rem;
-}
-
-.group-by-buttons {
-    display: flex;
-}
-
-.group-by-buttons button {
-    padding: 0.6rem 1rem;
-    border: 1px solid #ccc;
+/* Custom Select Dropdown */
+.filter-group select {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
     background-color: #fff;
-    cursor: pointer;
-    transition: background-color 0.2s, color 0.2s;
-}
-
-.group-by-buttons button:first-child {
-    border-top-left-radius: 4px;
-    border-bottom-left-radius: 4px;
-}
-
-.group-by-buttons button:last-child {
-    border-top-right-radius: 4px;
-    border-bottom-right-radius: 4px;
-    border-left-width: 0;
-}
-
-.group-by-buttons button.active {
-    background-color: #007bff;
-    color: white;
-    border-color: #007bff;
-}
-
-.apply-button {
-    padding: 0.6rem 1.2rem;
-    border: none;
-    background-color: #28a745;
-    color: white;
-    border-radius: 4px;
-    cursor: pointer;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 0.65rem 2.5rem 0.65rem 1rem;
     font-size: 1rem;
-    align-self: flex-end; /* Align with the bottom of other controls */
+    color: var(--text-color-primary);
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 0.5rem center;
+    background-repeat: no-repeat;
+    background-size: 1.5em 1.5em;
+    transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
 }
 
-.apply-button:disabled {
-    background-color: #ccc;
-    cursor: not-allowed;
+.filter-group select:hover {
+    border-color: var(--primary-color);
 }
+
+.filter-group select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
+}
+
 
 .data-display {
-    margin-top: 2rem;
+    background-color: var(--card-bg-color);
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
 }
 
-.data-display table {
-    width: 100%;
-    border-collapse: collapse;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-}
-
-.data-display th, .data-display td {
-    padding: 0.75rem 1rem;
-    border: 1px solid #ddd;
-    text-align: left;
-}
-
-.data-display th {
-    background-color: #f2f2f2;
-    font-weight: bold;
-}
-
-.data-display tr:nth-child(even) {
-    background-color: #f9f9f9;
-}
 
 .error {
     color: #dc3545;
     background-color: #f8d7da;
     border: 1px solid #f5c6cb;
     padding: 1rem;
-    border-radius: 4px;
+    border-radius: 8px;
+}
+
+/* Recharts Legend and Tooltip styling */
+.recharts-legend-item-text {
+    color: var(--text-color-primary) !important;
+}
+
+.recharts-tooltip-wrapper {
+    border-radius: 8px !important;
+    border: 1px solid var(--border-color) !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+}
+
+.recharts-tooltip-label {
+    color: var(--text-color-primary) !important;
+    font-weight: 600 !important;
 }

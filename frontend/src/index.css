@@ -24,10 +24,8 @@ a:hover {
 
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
+  /* display: flex; と place-items: center; を削除 */
   min-width: 320px;
-  /* max-width: 1280px; */
   min-height: 100vh;
 }
 
