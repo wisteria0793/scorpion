@@ -111,14 +111,29 @@ function RevenuePage() {
 
     const chartData = useMemo(() => {
         if (!monthlyData || monthlyData.length === 0) return [];
+        
+        const getSortOrder = (dateStr) => {
+            if (!dateStr || typeof dateStr !== 'string' || !dateStr.includes('-')) {
+                return 0; // 不正なデータはソート順に影響させない
+            }
+            const month = parseInt(dateStr.split('-')[1]);
+            if (isNaN(month)) {
+                return 0;
+            }
+            // 会計年度（3月始まり）でソート
+            return month < 3 ? month + 12 : month;
+        };
+
         const sorted = [...monthlyData].sort((a, b) => {
-            const monthA = parseInt(a.date.split('-')[1]);
-            const monthB = parseInt(b.date.split('-')[1]);
-            const sortOrderA = monthA < 3 ? monthA + 12 : monthA;
-            const sortOrderB = monthB < 3 ? monthB + 12 : sortOrderB;
+            const sortOrderA = getSortOrder(a.date);
+            const sortOrderB = getSortOrder(b.date);
             return sortOrderA - sortOrderB;
         });
-        return sorted.map(item => ({ ...item, name: `${parseInt(item.date.split('-')[1])}月` }));
+
+        return sorted.map(item => ({ 
+            ...item, 
+            name: (item.date && item.date.includes('-')) ? `${parseInt(item.date.split('-')[1])}月` : '不明'
+        }));
     }, [monthlyData]);
     
     const managementTypeOptions = useMemo(() => {
