@@ -1,29 +1,23 @@
 // src/pages/RevenuePage.jsx
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { fetchRevenueData } from '../services/revenueApi';
 import {
     ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
 import './RevenuePage.css';
 
-// カスタム凡例コンポーネント
+// カスタム凡例コンポーネント (グラフ下)
 const renderLegend = (props) => {
     const { payload } = props;
     if (!payload || payload.length === 0) return null;
 
-    // '総売上' を特定 (dataKeyが'total'のエントリ)
-    const totalRevenueEntry = payload.find(entry => entry.dataKey === 'total');
-    const otherEntries = payload.filter(entry => entry.dataKey !== 'total');
-
-    // 他の項目をアルファベット順にソート
-    otherEntries.sort((a, b) => {
+    const sortedPayload = [...payload].sort((a, b) => {
+        if (a.dataKey === 'total') return -1;
+        if (b.dataKey === 'total') return 1;
         if (a.value < b.value) return -1;
         if (a.value > b.value) return 1;
         return 0;
     });
-
-    // 総売上があれば先頭に追加
-    const sortedPayload = totalRevenueEntry ? [totalRevenueEntry, ...otherEntries] : otherEntries;
 
     return (
         <ul className="custom-legend">
@@ -35,6 +29,33 @@ const renderLegend = (props) => {
             ))}
         </ul>
     );
+};
+
+// カスタムツールチップコンポーネント (ホバー時)
+const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+        const sortedPayload = [...payload].sort((a, b) => {
+            if (a.dataKey === 'total') return -1;
+            if (b.dataKey === 'total') return 1;
+            if (a.name < b.name) return -1;
+            if (a.name > b.name) return 1;
+            return 0;
+        });
+
+        return (
+            <div className="custom-tooltip-window">
+                <p className="label">{`${label}`}</p>
+                <ul className="desc">
+                    {sortedPayload.map((entry, index) => (
+                        <li key={`item-${index}`} style={{ color: entry.color }}>
+                            {`${entry.name}: ¥${entry.value ? entry.value.toLocaleString() : 0}`}
+                        </li>
+                    ))}
+                </ul>
+            </div>
+        );
+    }
+    return null;
 };
 
 function RevenuePage() {
@@ -50,42 +71,20 @@ function RevenuePage() {
     const [selectedYear, setSelectedYear] = useState(getCurrentFiscalYear);
     const [selectedProperty, setSelectedProperty] = useState('');
 
-    const [loading, setLoading] = useState(true); // 初期ロードはtrue
+    const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const isInitialLoad = useRef(true);
 
     // 初期化処理
     useEffect(() => {
         const currentYear = getCurrentFiscalYear();
         setAvailableYears([currentYear, currentYear - 1, currentYear - 2, currentYear - 3]);
+        // 施設リストはハードコードで対応
+        setAvailableProperties(['巴.com', 'ONE PIECE HOUSE', '巴.com 3', '巴.com 5 Cafe&Stay', '巴.com プレミアムステイ', 'Guest house 巴.com hakodate motomachi']);
+    }, []);
 
-        const fetchInitialData = async () => {
-            setLoading(true); // ロード開始
-            try {
-                // まずは現在の会計年度の全施設データを取得
-                const data = await fetchRevenueData({ year: currentYear, property_name: '' });
-                setMonthlyData(data); // 初期表示用に取得したデータをセット
-                
-                // 施設リストはハードコードで対応 (将来的にAPIから取得が理想)
-                setAvailableProperties(['巴.com', 'ONE PIECE HOUSE', '巴.com3 Music&Stay', '巴.com5 Cafe&Stay', '巴.com プレミアムステイ', '巴.com motomachi']);
-                
-            } catch (err) {
-                console.error("Failed to fetch initial data", err);
-                setError('初期データの取得に失敗しました。');
-            } finally {
-                setLoading(false); // ロード終了
-            }
-        };
-
-        fetchInitialData();
-    }, []); // マウント時に一度だけ実行
-
-    // フィルター変更時に表示用データを再取得
+    // データ取得ロジック
     useEffect(() => {
-        // 初期ロード時または selectedYear が未設定の場合は実行しない
-        if (loading && monthlyData.length === 0) { // loadingがtrueでmonthlyDataが空なら初期ロード中
-            return;
-        }
-
         const loadData = async () => {
             setLoading(true);
             setError(null);
@@ -101,39 +100,27 @@ function RevenuePage() {
             }
         };
         
-        // selectedYear の初期値が設定されてから、かつマウント時以外の変更時に実行
-        // マウント時の初期データ取得は上のuseEffectで処理
-        if (selectedYear) {
-             loadData();
+        // マウント時の初回ロード
+        if (isInitialLoad.current) {
+            loadData();
+            isInitialLoad.current = false;
+        } else {
+            // フィルター変更時のロード
+            if (selectedYear) {
+                 loadData();
+            }
         }
     }, [selectedYear, selectedProperty]);
 
-
     const chartData = useMemo(() => {
         if (!monthlyData || monthlyData.length === 0) return [];
-        
-        const getSortOrder = (dateStr) => {
-            if (!dateStr || typeof dateStr !== 'string' || !dateStr.includes('-')) {
-                return 0; // 不正なデータはソート順に影響させない
-            }
-            const month = parseInt(dateStr.split('-')[1]);
-            if (isNaN(month)) {
-                return 0;
-            }
-            // 会計年度（3月始まり）でソート
-            return month < 3 ? month + 12 : month;
-        };
-
-        const sorted = [...monthlyData].sort((a, b) => {
-            const sortOrderA = getSortOrder(a.date);
-            const sortOrderB = getSortOrder(b.date);
+        return [...monthlyData].sort((a, b) => {
+            const monthA = parseInt(a.date.split('-')[1]);
+            const monthB = parseInt(b.date.split('-')[1]);
+            const sortOrderA = monthA < 3 ? monthA + 12 : monthA;
+            const sortOrderB = monthB < 3 ? monthB + 12 : monthB;
             return sortOrderA - sortOrderB;
-        });
-
-        return sorted.map(item => ({ 
-            ...item, 
-            name: (item.date && item.date.includes('-')) ? `${parseInt(item.date.split('-')[1])}月` : '不明'
-        }));
+        }).map(item => ({ ...item, name: `${parseInt(item.date.split('-')[1])}月` }));
     }, [monthlyData]);
     
     const managementTypeOptions = useMemo(() => {
@@ -178,7 +165,7 @@ function RevenuePage() {
                             <CartesianGrid strokeDasharray="3 3" />
                             <XAxis dataKey="name" />
                             <YAxis yAxisId="left" tickFormatter={(value) => `¥${(value / 10000).toLocaleString()}万`} />
-                            <Tooltip formatter={(value, name) => [`¥${value.toLocaleString()}`, name]} />
+                            <Tooltip content={<CustomTooltip />} />
                             <Legend content={renderLegend} />
                             {selectedProperty === '' ? (
                                 <>
@@ -193,9 +180,7 @@ function RevenuePage() {
                         </ComposedChart>
                     </ResponsiveContainer>
                 )}
-                {!loading && !error && chartData.length === 0 && (
-                    <p>表示するデータがありません。</p>
-                )}
+                {!loading && !error && chartData.length === 0 && <p>表示するデータがありません。</p>}
             </div>
         </div>
     );

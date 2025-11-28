@@ -115,6 +115,8 @@ class Command(BaseCommand):
                 # Guest NameはHTMLエンティティをデコード
                 guest_name_val = html.unescape(row[col_indices['guest_name']]) if row[col_indices['guest_name']] else ''
 
+                self.stdout.write(f"DEBUG: Syncing for property name: '{property_obj.name}' with book ID {beds24_book_id}")
+
                 defaults = {
                     'property': property_obj,
                     'status': row[col_indices['status']],

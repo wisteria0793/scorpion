@@ -133,29 +133,32 @@
     display: inline-block;
 }
 
-/* Custom Legend Styles */
-.custom-legend {
-    list-style: none;
-    margin: 0;
-    padding: 20px 0 0 0;
-    display: flex;
-    justify-content: center;
-    flex-wrap: wrap;
-    gap: 1rem 1.5rem;
+/* Custom Tooltip Window Styles */
+.custom-tooltip-window {
+    background-color: var(--card-bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
 }
 
-.custom-legend-item {
-    display: flex;
-    align-items: center;
+.custom-tooltip-window .label {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-color-primary);
+    margin-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.5rem;
+}
+
+.custom-tooltip-window .desc {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.custom-tooltip-window .desc li {
     font-size: 0.875rem;
     color: var(--text-color-secondary);
-    cursor: pointer;
-}
-
-.legend-icon {
-    width: 12px;
-    height: 12px;
-    border-radius: 3px;
-    margin-right: 8px;
-    display: inline-block;
+    margin-bottom: 0.25rem;
 }
