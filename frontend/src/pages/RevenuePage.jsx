@@ -38,10 +38,20 @@ const CustomTooltip = ({ active, payload, label }) => {
         const desiredOrder = ['総売上', '委託管理', '自社管理'];
 
         const sortedPayload = [...payload].sort((a, b) => {
-            const indexA = desiredOrder.indexOf(a.name);
-            const indexB = desiredOrder.indexOf(b.name);
+            const nameA = a.name;
+            const nameB = b.name;
 
-            // desiredOrder にない項目は後ろに回す
+            const indexA = desiredOrder.indexOf(nameA);
+            const indexB = desiredOrder.indexOf(nameB);
+
+            // desiredOrder にない項目はアルファベット順（または最後）
+            // 両方とも desiredOrder にない場合
+            if (indexA === -1 && indexB === -1) {
+                if (nameA < nameB) return -1;
+                if (nameA > nameB) return 1;
+                return 0;
+            }
+            // どちらか一方だけ desiredOrder にない場合、ある方を優先
             if (indexA === -1) return 1;
             if (indexB === -1) return -1;
 
@@ -49,7 +59,7 @@ const CustomTooltip = ({ active, payload, label }) => {
         });
 
         return (
-            <div className="custom-tooltip-window">
+            <div className="custom-tooltip-window"> {/* custom-tooltip-window クラスを適用 */}
                 <p className="label">{`${label}`}</p>
                 <ul className="desc">
                     {sortedPayload.map((entry, index) => (
@@ -81,15 +91,12 @@ function RevenuePage() {
     const [error, setError] = useState(null);
     const isInitialLoad = useRef(true);
 
-    // 初期化処理
     useEffect(() => {
         const currentYear = getCurrentFiscalYear();
         setAvailableYears([currentYear, currentYear - 1, currentYear - 2, currentYear - 3]);
-        // 施設リストはハードコードで対応
         setAvailableProperties(['巴.com', 'ONE PIECE HOUSE', '巴.com 3', '巴.com 5 Cafe&Stay', '巴.com プレミアムステイ', 'Guest house 巴.com hakodate motomachi']);
     }, []);
 
-    // データ取得ロジック
     useEffect(() => {
         const loadData = async () => {
             setLoading(true);
@@ -106,15 +113,8 @@ function RevenuePage() {
             }
         };
         
-        // マウント時の初回ロード
-        if (isInitialLoad.current) {
-            loadData();
-            isInitialLoad.current = false;
-        } else {
-            // フィルター変更時のロード
-            if (selectedYear) {
-                 loadData();
-            }
+        if (selectedYear) {
+             loadData();
         }
     }, [selectedYear, selectedProperty]);
 
@@ -177,7 +177,7 @@ function RevenuePage() {
                                 <>
                                     <Line type="monotone" yAxisId="left" dataKey="total" name="総売上" stroke="#ff7300" strokeWidth={2} dot={false}/>
                                     {managementTypeOptions.map((typeName, index) => (
-                                        <Bar key={typeName} yAxisId="left" dataKey={typeName} stackId="a" fill={COLORS[index % COLORS.length]} />
+                                        <Bar key={typeName} yAxisId="left" dataKey={typeName} stackId="a" fill={COLORS[index % COLORS.length]} name={typeName} />
                                     ))}
                                 </>
                             ) : (
