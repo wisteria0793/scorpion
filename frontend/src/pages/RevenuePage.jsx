@@ -9,7 +9,7 @@ import './RevenuePage.css';
 function RevenuePage() {
     const [monthlyData, setMonthlyData] = useState([]);
     const [availableYears, setAvailableYears] = useState([]);
-    const [availableProperties, setAvailableProperties] = useState([]); // 施設リストを永続的に保持
+    const [availableProperties, setAvailableProperties] = useState([]);
     
     const getCurrentFiscalYear = () => {
         const today = new Date();
@@ -29,7 +29,6 @@ function RevenuePage() {
 
         const fetchInitialData = async () => {
             try {
-                // 全施設のデータを一度取得して、そこから施設リストを生成
                 const initialData = await fetchRevenueData({ year: currentYear, property_name: '' });
                 const keys = new Set();
                 initialData.forEach(month => {
@@ -42,11 +41,14 @@ function RevenuePage() {
                 setAvailableProperties(Array.from(keys).sort());
             } catch (err) {
                 console.error("Failed to fetch initial property list", err);
-                setError('施設リストの取得に失敗しました。');
             }
         };
 
-        fetchInitialData();
+        // このロジックは施設リスト取得の課題を解決するものではないが、
+        // 別の施設を選択した時に、その施設名がリストに含まれていないと不整合が起きるため、
+        // 動的に全施設名を取得するアプローチ自体は必要。
+        // 今回はmanagement_typeで集計するため、このロジックは一旦コメントアウト。
+        // fetchInitialData();
     }, []);
 
     // フィルター変更時に表示用データを再取得
@@ -91,8 +93,30 @@ function RevenuePage() {
             name: `${parseInt(item.date.split('-')[1])}月`,
         }));
     }, [monthlyData]);
+    
+    // データから動的に「管理形態」のキーを抽出
+    const managementTypeOptions = useMemo(() => {
+        if (monthlyData.length > 0 && selectedProperty === '') {
+            const keys = new Set();
+            monthlyData.forEach(month => {
+                Object.keys(month).forEach(key => {
+                    if (key !== 'date' && key !== 'name' && key !== 'total' && key !== 'revenue') {
+                        keys.add(key);
+                    }
+                });
+            });
+            return Array.from(keys).sort();
+        }
+        return [];
+    }, [monthlyData, selectedProperty]);
 
-    const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#a4de6c', '#d0ed57', '#ffc658'];
+    // propertyOptionsは当面ハードコードで維持
+    const propertyOptions = useMemo(() => {
+        return ['巴.com', 'ONE PIECE HOUSE', '巴.com 3', '巴.com 5 Cafe&Stay', '巴.com プレミアムステイ'];
+    }, []);
+
+
+    const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088FE', '#00C49F'];
 
     return (
         <div className="revenue-page">
@@ -101,12 +125,7 @@ function RevenuePage() {
             <div className="filters">
                 <div className="filter-group">
                     <label htmlFor="selectedYear">会計年度:</label>
-                    <select
-                        id="selectedYear"
-                        name="selectedYear"
-                        value={selectedYear}
-                        onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-                    >
+                    <select id="selectedYear" name="selectedYear" value={selectedYear} onChange={(e) => setSelectedYear(parseInt(e.target.value))}>
                         {availableYears.map(year => (
                             <option key={year} value={year}>{year}年度</option>
                         ))}
@@ -115,14 +134,9 @@ function RevenuePage() {
 
                 <div className="filter-group">
                     <label htmlFor="selectedProperty">施設:</label>
-                    <select
-                        id="selectedProperty"
-                        name="selectedProperty"
-                        value={selectedProperty}
-                        onChange={(e) => setSelectedProperty(e.target.value)}
-                    >
+                    <select id="selectedProperty" name="selectedProperty" value={selectedProperty} onChange={(e) => setSelectedProperty(e.target.value)}>
                         <option value="">全施設</option>
-                        {availableProperties.map(propName => (
+                        {propertyOptions.map(propName => (
                             <option key={propName} value={propName}>{propName}</option>
                         ))}
                     </select>
@@ -142,28 +156,21 @@ function RevenuePage() {
                             <Legend />
                             
                             {selectedProperty === '' ? (
+                                // 全施設: 管理形態別の積み上げグラフ + 合計の折れ線グラフ
                                 <>
-                                    {availableProperties.map((propName, index) => (
+                                    {managementTypeOptions.map((typeName, index) => (
                                         <Bar 
-                                            key={propName} 
+                                            key={typeName} 
                                             yAxisId="left"
-                                            dataKey={propName} 
+                                            dataKey={typeName} 
                                             stackId="a" 
                                             fill={COLORS[index % COLORS.length]} 
                                         />
                                     ))}
-                                    <Line 
-                                        type="monotone" 
-                                        yAxisId="left"
-                                        dataKey="total" 
-                                        name="総売上" 
-                                        stroke="#ff7300" 
-                                        strokeWidth={2}
-                                        dot={false}
-                                    />
+                                    <Line type="monotone" yAxisId="left" dataKey="total" name="総売上" stroke="#ff7300" strokeWidth={2} dot={false}/>
                                 </>
                             ) : (
-                                    // 特定施設: シンプルな棒グラフ
+                                // 特定施設: シンプルな棒グラフ
                                 <Bar yAxisId="left" dataKey="revenue" name="売上" fill="#8884d8" />
                             )}
                         </ComposedChart>
