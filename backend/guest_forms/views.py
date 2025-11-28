@@ -106,98 +106,202 @@ class GuestFormSubmitView(APIView):
 
 
 class RevenueAPIView(APIView):
+
+
     """
-    施設ごとの売上データを集計して提供するAPIビュー
+
+
+    指定された年度と施設（任意）の月別売上データを集計して提供するAPIビュー
+
+
     """
+
+
+
+
 
     def get(self, request, *args, **kwargs):
-        # クエリパラメータから日付とフィルター条件を取得
-        start_date_str = request.query_params.get('start_date')
-        end_date_str = request.query_params.get('end_date')
-        group_by = request.query_params.get('group_by', 'month') # デフォルトは月別
-        property_name = request.query_params.get('property_name') # 追加: 施設名フィルター
-        selected_year = request.query_params.get('year') # 追加: 年度フィルター
 
-        # 日付パラメータがなければ、今年の1月1日から今日までをデフォルトとする
-        today = date.today()
+
+        # クエリパラメータから年度と施設名を取得
+
+
         try:
-            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date() if start_date_str else date(today.year, 1, 1)
-            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date() if end_date_str else today
-        except ValueError:
-            return Response(
-                {"error": "日付の形式は 'YYYY-MM-DD' にしてください。"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
 
-        # サービス関数を呼び出してデータを取得
+
+            selected_year = int(request.query_params.get('year', date.today().year))
+
+
+        except (ValueError, TypeError):
+
+
+            selected_year = date.today().year
+
+
+
+
+
+        property_name = request.query_params.get('property_name')
+
+
+
+
+
+        # 選択された年度の開始日と終了日を決定
+
+
+        start_date = date(selected_year, 1, 1)
+
+
+        end_date = date(selected_year, 12, 31)
+
+
+
+
+
+        # サービス関数を呼び出して全データを取得
+
+
         raw_data = get_revenue_data(start_date, end_date)
 
+
+
+
+
         if raw_data is None:
+
+
             return Response(
+
+
                 {"error": "Beds24 APIからのデータ取得に失敗しました。"},
+
+
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
+
+
             )
+
+
         
-        # property_nameとyearでrawDataをフィルター
-        filtered_data = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))
-        for p_name, year_data in raw_data.items():
-            if property_name and p_name != property_name:
-                continue # 指定された施設名と異なる場合はスキップ
 
-            for year, month_data in year_data.items():
-                if selected_year and int(year) != int(selected_year):
-                    continue # 指定された年度と異なる場合はスキップ
 
-                filtered_data[p_name][year] = month_data # フィルターを通ったデータを格納
+        # 指定された施設名でデータをフィルタリング
 
-        # group_by パラメータに応じてデータを整形
-        response_data = self._format_data(filtered_data, group_by)
+
+        if property_name:
+
+
+            filtered_data = {
+
+
+                p_name: year_data 
+
+
+                for p_name, year_data in raw_data.items() 
+
+
+                if p_name == property_name
+
+
+            }
+
+
+        else:
+
+
+            # 施設名が指定されなければ、全施設のデータを対象とする
+
+
+            filtered_data = raw_data
+
+
+
+
+
+        # データを月別に整形
+
+
+        response_data = self._format_data_monthly(filtered_data)
+
+
+
+
 
         return Response(response_data)
 
-    def _format_data(self, raw_data, group_by):
-        """
-        取得した売上データを指定された粒度で集計・整形する
-        raw_data format: {facility_name: {year: {month: revenue}}}
-        """
-        if group_by == 'facility':
-            # 施設別の総売上
-            # { "name": "施設A", "total_revenue": 12345 }
-            result = []
-            for facility_name, year_data in raw_data.items():
-                total_revenue = sum(
-                    revenue
-                    for year, month_data in year_data.items()
-                    for month, revenue in month_data.items()
-                )
-                result.append({
-                    "name": facility_name,
-                    "total_revenue": total_revenue
-                })
-            return result
-        
-        elif group_by == 'year':
-            # 年度別の総売上
-            # { "year": 2025, "revenue": 123456 }
-            yearly_revenue = defaultdict(int)
-            for facility_name, year_data in raw_data.items():
-                for year, month_data in year_data.items():
-                    yearly_revenue[year] += sum(month_data.values())
-            
-            return [{"year": year, "revenue": revenue} for year, revenue in sorted(yearly_revenue.items())]
 
-        else: # default to 'month'
-            # 月別の総売上
-            # { "date": "2025-01", "revenue": 12345 }
-            monthly_revenue = defaultdict(int)
-            # raw_data はすでに property_name と year でフィルターされていることを想定
-            for facility_name, year_data in raw_data.items():
-                for year, month_data in year_data.items():
-                    for month, revenue in month_data.items():
-                         # yearとmonthを組み合わせたキーで集計
-                        monthly_revenue[f"{year}-{str(month).zfill(2)}"] += revenue
-            
-            return [
-                {"date": date_key, "revenue": revenue}
-                for date_key, revenue in sorted(monthly_revenue.items())
-            ]
+
+
+
+    def _format_data_monthly(self, data):
+
+
+        """
+
+
+        データを月別に集計・整形する
+
+
+        """
+
+
+        monthly_revenue = defaultdict(int)
+
+
+        for facility_name, year_data in data.items():
+
+
+            for year, month_data in year_data.items():
+
+
+                for month, revenue in month_data.items():
+
+
+                    # yearとmonthを組み合わせたキーで集計
+
+
+                    monthly_revenue[f"{year}-{str(month).zfill(2)}"] += revenue
+
+
+        
+
+
+        # 1年分の月のデータが揃うように、0埋めしたデータを作成
+
+
+        # dataのキーからyearを取得（複数年にまたがることはない想定）
+
+
+        year = next(iter(next(iter(data.values()))), None) if data else date.today().year
+
+
+        
+
+
+        result = []
+
+
+        for month_num in range(1, 13):
+
+
+            date_key = f"{year}-{str(month_num).zfill(2)}"
+
+
+            result.append({
+
+
+                "date": date_key,
+
+
+                "revenue": monthly_revenue.get(date_key, 0)
+
+
+            })
+
+
+
+
+
+        return result
+

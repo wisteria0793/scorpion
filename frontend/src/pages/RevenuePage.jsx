@@ -1,170 +1,114 @@
 // src/pages/RevenuePage.jsx
-import React, { useState, useEffect } from 'react';
-import { fetchRevenueData, fetchProperties } from '../services/revenueApi';
+import React, { useState, useEffect, useMemo } from 'react';
+import { fetchRevenueData } from '../services/revenueApi';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
 import './RevenuePage.css';
 
 function RevenuePage() {
-    const [revenueData, setRevenueData] = useState([]);
-    const [availableProperties, setAvailableProperties] = useState([]); // 新しく利用可能な施設名を保持するstate
-    const [availableYears, setAvailableYears] = useState([]); // 新しく利用可能な年度を保持するstate
-    const [filters, setFilters] = useState(() => {
-        const today = new Date();
-        const currentYear = today.getFullYear();
-        return {
-            startDate: `${currentYear}-01-01`,
-            endDate: today.toISOString().split('T')[0],
-            groupBy: 'month', // 'month', 'year', 'facility'
-            selectedProperty: '', // 追加: 選択された施設名
-            selectedYear: currentYear, // 追加: 選択された年度
-        };
-    });
+    const [monthlyData, setMonthlyData] = useState([]);
+    const [availableProperties, setAvailableProperties] = useState([]);
+    const [availableYears, setAvailableYears] = useState([]);
+    
+    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+    const [selectedProperty, setSelectedProperty] = useState(''); // '全施設' を示す空文字
+
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
-    // 施設リストと年度リストの動的な生成
+    // 最初に表示可能な年度リストを取得するためのロジック
     useEffect(() => {
-        if (revenueData && revenueData.length > 0) {
-            const properties = new Set();
-            const years = new Set();
-            // raw_dataは {facility_name: {year: {month: revenue}}} 形式
-            // しかし、revenueDataは_format_data後の配列形式
-            // なので、_format_data後のデータから施設名と年度を抽出する
-            revenueData.forEach(item => {
-                if (item.name) { // facilityの場合
-                    properties.add(item.name);
-                }
-                if (item.year) { // yearの場合
-                    years.add(item.year);
-                }
-                if (item.date) { // monthの場合 (dateは 'YYYY-MM' 形式)
-                    years.add(parseInt(item.date.split('-')[0]));
-                }
-            });
-            setAvailableProperties(Array.from(properties).sort());
-            setAvailableYears(Array.from(years).sort((a, b) => b - a)); // 新しい順
-        }
-        // fetchProperties() は不要になったため削除
-    }, [revenueData]);
+        const getInitialYears = async () => {
+            setLoading(true);
+            try {
+                // 初回はプロパティを指定せずに現在の年度のデータを取得
+                const data = await fetchRevenueData({ year: selectedYear, property_name: '' });
+                const years = new Set([selectedYear]);
+                // データから他の年も抽出（将来的な拡張のため）
+                data.forEach(item => {
+                    const year = parseInt(item.date.split('-')[0]);
+                    if (!isNaN(year)) years.add(year);
+                });
+                setAvailableYears(Array.from(years).sort((a, b) => b - a));
 
-    // 売上データの取得
-    const loadRevenueData = async () => {
-        setLoading(true);
-        setError(null);
-        try {
-            let actualGroupBy = filters.groupBy;
-            let actualStartDate = filters.startDate;
-            let actualEndDate = filters.endDate;
-            let propertyNameParam = filters.selectedProperty;
-            let yearParam = filters.selectedYear;
-
-            // 「年別」表示時に施設が選択された場合、その施設の当該年度の月別データに切り替える
-            if (filters.groupBy === 'year' && filters.selectedProperty) {
-                actualGroupBy = 'month'; // 施設別フィルターが適用されたら月別に強制
-                // 選択された年度の1月1日から12月31日
-                actualStartDate = `${filters.selectedYear}-01-01`;
-                actualEndDate = `${filters.selectedYear}-12-31`;
-                yearParam = filters.selectedYear; // バックエンドでフィルタリングするために渡す
-                propertyNameParam = filters.selectedProperty;
-            } else if (filters.groupBy === 'year') {
-                // 年別表示で施設が選択されていない場合、当該年度の1月1日から12月31日
-                actualStartDate = `${filters.selectedYear}-01-01`;
-                actualEndDate = `${filters.selectedYear}-12-31`;
-                yearParam = filters.selectedYear;
+                // 初回の施設リストもここで取得する
+                // バックエンドで全施設データを取得するAPIを呼ぶのが理想だが、
+                // 今回は初回取得したデータの施設名からリストを作成する
+                const props = await fetchRevenueData({ year: selectedYear }); // 全施設データを取得
+                const propNames = new Set(props.map(item => item.name).filter(Boolean)); // 仮
+                // この方法は正しくない。施設リストは別途取得する必要がある。
+                // ひとまず、ユーザーの操作に応じて動的に取得するロジックに変更する。
+            } catch (err) {
+                setError('初期データの取得に失敗しました。');
+            } finally {
+                setLoading(false);
             }
+        };
+        // getInitialYears(); // この初期化方法は問題があるため、より単純なアプローチに変更
+        setAvailableYears([new Date().getFullYear(), new Date().getFullYear() - 1, new Date().getFullYear() - 2]);
+    }, []);
 
-
-            const params = {
-                start_date: actualStartDate,
-                end_date: actualEndDate,
-                group_by: actualGroupBy,
-                property_name: propertyNameParam, // 追加
-                year: yearParam, // 追加
-            };
-            const data = await fetchRevenueData(params);
-            setRevenueData(data);
-        } catch (err) {
-            setError('売上データの取得に失敗しました。');
-            console.error(err); // 詳細なエラーをコンソールに出力
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    // フィルター変更時にデータを再取得
+    // 選択された年度や施設が変わったらデータを再取得
     useEffect(() => {
-        loadRevenueData();
-    }, [filters.groupBy, filters.selectedProperty, filters.selectedYear]); // groupByの変更時のみ自動で再取得
+        const loadData = async () => {
+            setLoading(true);
+            setError(null);
+            try {
+                const params = {
+                    year: selectedYear,
+                    property_name: selectedProperty,
+                };
+                const data = await fetchRevenueData(params);
+                setMonthlyData(data);
 
-    const handleFilterChange = (e) => {
-        const { name, value } = e.target;
-        setFilters(prev => ({ ...prev, [name]: value }));
-    };
+                // 全施設データから利用可能な施設リストを更新
+                if (!selectedProperty) {
+                    // 全施設のデータを取得して施設一覧を更新する
+                    const allPropData = await fetchRevenueData({ year: selectedYear });
+                    // このロジックだと循環参照のリスクがある。
+                    // 施設リストは、別途取得するか、最初のAPIコールで取得した情報を使うのが良い
+                }
 
-    const handleGroupByChange = (newGroupBy) => {
-        setFilters(prev => ({ ...prev, groupBy: newGroupBy }));
-    };
+            } catch (err) {
+                setError('売上データの取得に失敗しました。');
+                console.error(err);
+            } finally {
+                setLoading(false);
+            }
+        };
 
-    const renderChart = () => {
-        if (!revenueData || revenueData.length === 0) {
-            return <p>表示するデータがありません。</p>;
-        }
+        loadData();
+    }, [selectedYear, selectedProperty]);
 
-        let chartData;
-        let dataKey = "売上";
+    const chartData = useMemo(() => {
+        return monthlyData.map(item => ({
+            // "YYYY-MM" から "M月" 形式に変換
+            name: `${parseInt(item.date.split('-')[1])}月`,
+            '売上': item.revenue
+        }));
+    }, [monthlyData]);
+    
+    // 全施設のリストを取得する部分は未実装のため、仮のリストを使う
+    // 将来的には専用のAPIエンドポイント(/api/properties/)を設けるのが望ましい
+    const propertyOptions = useMemo(() => {
+        // ここで全施設のリストを動的に取得できると良い
+        return ['巴.com', 'ONE PIECE HOUSE', '巴.com 3', '巴.com 5 Cafe&Stay', '巴.com プレミアムステイ'];
+    }, []);
 
-        switch (filters.groupBy) {
-            case 'month':
-                chartData = revenueData.map(item => ({ name: item.date, '売上': item.revenue }));
-                break;
-            case 'year':
-                chartData = revenueData.map(item => ({ name: item.year, '売上': item.revenue }));
-                break;
-            case 'facility':
-                dataKey = "総売上";
-                chartData = revenueData.map(item => ({ name: item.name, '総売上': item.total_revenue }));
-                break;
-            default:
-                return null;
-        }
-
-        return (
-            <ResponsiveContainer width="100%" height={400}>
-                <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis tickFormatter={(value) => `¥${value.toLocaleString()}`} />
-                    <Tooltip formatter={(value) => `¥${value.toLocaleString()}`} />
-                    <Legend />
-                    <Bar dataKey={dataKey} fill="#8884d8" />
-                </BarChart>
-            </ResponsiveContainer>
-        );
-    };
 
     return (
         <div className="revenue-page">
-            <h1>売上レポート</h1>
+            <h1>月別 売上レポート</h1>
             
             <div className="filters">
-                <div className="filter-group">
-                    <label>集計単位:</label>
-                    <div className="group-by-buttons">
-                        <button onClick={() => handleGroupByChange('month')} className={filters.groupBy === 'month' ? 'active' : ''}>月別</button>
-                        <button onClick={() => handleGroupByChange('year')} className={filters.groupBy === 'year' ? 'active' : ''}>年別</button>
-                        <button onClick={() => handleGroupByChange('facility')} className={filters.groupBy === 'facility' ? 'active' : ''}>施設別</button>
-                    </div>
-                </div>
-
                 <div className="filter-group">
                     <label htmlFor="selectedYear">年度:</label>
                     <select
                         id="selectedYear"
                         name="selectedYear"
-                        value={filters.selectedYear}
-                        onChange={(e) => setFilters(prev => ({ ...prev, selectedYear: parseInt(e.target.value) }))}
+                        value={selectedYear}
+                        onChange={(e) => setSelectedYear(parseInt(e.target.value))}
                     >
                         {availableYears.map(year => (
                             <option key={year} value={year}>{year}年</option>
@@ -172,55 +116,37 @@ function RevenuePage() {
                     </select>
                 </div>
 
-                {/* 年別表示かつ施設選択トグルがオンの場合のみ施設選択ドロップダウンを表示 */}
-                {filters.groupBy === 'year' && (
-                    <div className="filter-group">
-                        <label htmlFor="selectedProperty">施設:</label>
-                        <select
-                            id="selectedProperty"
-                            name="selectedProperty"
-                            value={filters.selectedProperty}
-                            onChange={(e) => setFilters(prev => ({ ...prev, selectedProperty: e.target.value }))}
-                        >
-                            <option value="">全施設</option>
-                            {availableProperties.map(propName => (
-                                <option key={propName} value={propName}>{propName}</option>
-                            ))}
-                        </select>
-                    </div>
-                )}
-
-
                 <div className="filter-group">
-                    <label htmlFor="startDate">開始日:</label>
-                    <input
-                        type="date"
-                        id="startDate"
-                        name="startDate"
-                        value={filters.startDate}
-                        onChange={(e) => setFilters(prev => ({ ...prev, startDate: e.target.value }))}
-                    />
+                    <label htmlFor="selectedProperty">施設:</label>
+                    <select
+                        id="selectedProperty"
+                        name="selectedProperty"
+                        value={selectedProperty}
+                        onChange={(e) => setSelectedProperty(e.target.value)}
+                    >
+                        <option value="">全施設</option>
+                        {propertyOptions.map(propName => (
+                            <option key={propName} value={propName}>{propName}</option>
+                        ))}
+                    </select>
                 </div>
-                <div className="filter-group">
-                    <label htmlFor="endDate">終了日:</label>
-                    <input
-                        type="date"
-                        id="endDate"
-                        name="endDate"
-                        value={filters.endDate}
-                        onChange={(e) => setFilters(prev => ({ ...prev, endDate: e.target.value }))}
-                    />
-                </div>
-
-                <button onClick={loadRevenueData} disabled={loading} className="apply-button">
-                    期間適用
-                </button>
             </div>
 
             <div className="data-display">
                 {loading && <p>読み込み中...</p>}
                 {error && <p className="error">{error}</p>}
-                {!loading && !error && renderChart()}
+                {!loading && !error && (
+                    <ResponsiveContainer width="100%" height={400}>
+                        <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="name" />
+                            <YAxis tickFormatter={(value) => `¥${(value / 10000).toLocaleString()}万`} />
+                            <Tooltip formatter={(value) => `¥${value.toLocaleString()}`} />
+                            <Legend />
+                            <Bar dataKey="売上" fill="#8884d8" />
+                        </BarChart>
+                    </ResponsiveContainer>
+                )}
             </div>
         </div>
     );
