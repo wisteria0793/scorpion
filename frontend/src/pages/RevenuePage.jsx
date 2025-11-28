@@ -82,19 +82,35 @@ function RevenuePage() {
     }, [selectedYear, selectedProperty]);
 
     const chartData = useMemo(() => {
+        if (!monthlyData || monthlyData.length === 0) return [];
         return monthlyData.map(item => ({
+            ...item,
             // "YYYY-MM" から "M月" 形式に変換
             name: `${parseInt(item.date.split('-')[1])}月`,
-            '売上': item.revenue
         }));
     }, [monthlyData]);
     
-    // 全施設のリストを取得する部分は未実装のため、仮のリストを使う
-    // 将来的には専用のAPIエンドポイント(/api/properties/)を設けるのが望ましい
     const propertyOptions = useMemo(() => {
-        // ここで全施設のリストを動的に取得できると良い
+        // 全施設のデータから動的に施設リストを生成
+        if (monthlyData.length > 0 && selectedProperty === '') {
+            const keys = new Set();
+            monthlyData.forEach(month => {
+                Object.keys(month).forEach(key => {
+                    if (key !== 'date' && key !== 'name') {
+                        keys.add(key);
+                    }
+                });
+            });
+            return Array.from(keys).sort();
+        }
+        // 特定施設選択時は、その施設名だけ分かれば良いが、
+        // 他の施設に切り替えるために全リストは維持しておきたい。
+        // 仮のハードコードリストを使う。将来的には専用APIで取得する。
         return ['巴.com', 'ONE PIECE HOUSE', '巴.com 3', '巴.com 5 Cafe&Stay', '巴.com プレミアムステイ'];
-    }, []);
+    }, [monthlyData, selectedProperty]);
+
+    // 積み上げグラフ用の色定義
+    const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088FE', '#00C49F'];
 
 
     return (
@@ -143,7 +159,20 @@ function RevenuePage() {
                             <YAxis tickFormatter={(value) => `¥${(value / 10000).toLocaleString()}万`} />
                             <Tooltip formatter={(value) => `¥${value.toLocaleString()}`} />
                             <Legend />
-                            <Bar dataKey="売上" fill="#8884d8" />
+                            {selectedProperty === '' ? (
+                                // 全施設: 積み上げグラフ
+                                propertyOptions.map((propName, index) => (
+                                    <Bar 
+                                        key={propName} 
+                                        dataKey={propName} 
+                                        stackId="a" 
+                                        fill={COLORS[index % COLORS.length]} 
+                                    />
+                                ))
+                            ) : (
+                                // 特定施設: シンプルな棒グラフ
+                                <Bar dataKey="revenue" name="売上" fill="#8884d8" />
+                            )}
                         </BarChart>
                     </ResponsiveContainer>
                 )}
