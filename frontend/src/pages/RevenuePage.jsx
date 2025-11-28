@@ -163,7 +163,7 @@ function RevenuePage() {
                                     />
                                 </>
                             ) : (
-                                <Bar yAxisId="left" dataKey="revenue" name="売上" fill="#8884d8" />
+                                <Bar yAxisId="left" dataKey="revenue" name={selectedProperty} fill="#8884d8" />
                             )}
                         </ComposedChart>
                     </ResponsiveContainer>
