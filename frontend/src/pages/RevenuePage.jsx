@@ -94,7 +94,7 @@ function RevenuePage() {
     useEffect(() => {
         const currentYear = getCurrentFiscalYear();
         setAvailableYears([currentYear, currentYear - 1, currentYear - 2, currentYear - 3]);
-        setAvailableProperties(['巴.com', 'ONE PIECE HOUSE', '巴.com 3', '巴.com 5 Cafe&Stay', '巴.com プレミアムステイ', 'Guest house 巴.com hakodate motomachi']);
+        setAvailableProperties(['ゲストハウス巴.com', 'ONE PIECE HOUSE', '巴.com3 Music&Stay', '巴.com4 Motomachi', '巴.com5 Cafe&Stay', '巴.com PremiumStay', 'mimosa', 'Iris']);
     }, []);
 
     useEffect(() => {
