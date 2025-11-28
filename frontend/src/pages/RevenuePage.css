@@ -132,3 +132,30 @@
     margin-right: 8px;
     display: inline-block;
 }
+
+/* Custom Legend Styles */
+.custom-legend {
+    list-style: none;
+    margin: 0;
+    padding: 20px 0 0 0;
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 1rem 1.5rem;
+}
+
+.custom-legend-item {
+    display: flex;
+    align-items: center;
+    font-size: 0.875rem;
+    color: var(--text-color-secondary);
+    cursor: pointer;
+}
+
+.legend-icon {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    margin-right: 8px;
+    display: inline-block;
+}

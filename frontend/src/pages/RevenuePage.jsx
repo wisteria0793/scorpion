@@ -11,14 +11,19 @@ const renderLegend = (props) => {
     const { payload } = props;
     if (!payload || payload.length === 0) return null;
 
-    // '総売上' を先頭に持ってくるようにペイロードをソート
-    const sortedPayload = [...payload].sort((a, b) => {
-        if (a.value === '総売上') return -1;
-        if (b.value === '総売上') return 1;
+    // '総売上' を特定 (dataKeyが'total'のエントリ)
+    const totalRevenueEntry = payload.find(entry => entry.dataKey === 'total');
+    const otherEntries = payload.filter(entry => entry.dataKey !== 'total');
+
+    // 他の項目をアルファベット順にソート
+    otherEntries.sort((a, b) => {
         if (a.value < b.value) return -1;
         if (a.value > b.value) return 1;
         return 0;
     });
+
+    // 総売上があれば先頭に追加
+    const sortedPayload = totalRevenueEntry ? [totalRevenueEntry, ...otherEntries] : otherEntries;
 
     return (
         <ul className="custom-legend">
@@ -45,7 +50,7 @@ function RevenuePage() {
     const [selectedYear, setSelectedYear] = useState(getCurrentFiscalYear);
     const [selectedProperty, setSelectedProperty] = useState('');
 
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(true); // 初期ロードはtrue
     const [error, setError] = useState(null);
 
     // 初期化処理
@@ -54,20 +59,20 @@ function RevenuePage() {
         setAvailableYears([currentYear, currentYear - 1, currentYear - 2, currentYear - 3]);
 
         const fetchInitialData = async () => {
-            setLoading(true);
+            setLoading(true); // ロード開始
             try {
                 // まずは現在の会計年度の全施設データを取得
                 const data = await fetchRevenueData({ year: currentYear, property_name: '' });
-                setMonthlyData(data);
+                setMonthlyData(data); // 初期表示用に取得したデータをセット
                 
-                // 施設リストはハードコードで対応
+                // 施設リストはハードコードで対応 (将来的にAPIから取得が理想)
                 setAvailableProperties(['巴.com', 'ONE PIECE HOUSE', '巴.com 3', '巴.com 5 Cafe&Stay', '巴.com プレミアムステイ', 'Guest house 巴.com hakodate motomachi']);
                 
             } catch (err) {
                 console.error("Failed to fetch initial data", err);
                 setError('初期データの取得に失敗しました。');
             } finally {
-                setLoading(false);
+                setLoading(false); // ロード終了
             }
         };
 
@@ -76,11 +81,8 @@ function RevenuePage() {
 
     // フィルター変更時に表示用データを再取得
     useEffect(() => {
-        // マウント時の初期ロードは上のuseEffectで行うので、ここでは実行しない
-        // ただし、ユーザーが初期表示後に再度同じ年度を選んだ場合も考慮し、
-        // 単純にマウント時の重複ロードを防ぐフラグは設けない
-        const initialLoad = loading && monthlyData.length === 0;
-        if (initialLoad) {
+        // 初期ロード時または selectedYear が未設定の場合は実行しない
+        if (loading && monthlyData.length === 0) { // loadingがtrueでmonthlyDataが空なら初期ロード中
             return;
         }
 
@@ -99,6 +101,8 @@ function RevenuePage() {
             }
         };
         
+        // selectedYear の初期値が設定されてから、かつマウント時以外の変更時に実行
+        // マウント時の初期データ取得は上のuseEffectで処理
         if (selectedYear) {
              loadData();
         }
@@ -111,7 +115,7 @@ function RevenuePage() {
             const monthA = parseInt(a.date.split('-')[1]);
             const monthB = parseInt(b.date.split('-')[1]);
             const sortOrderA = monthA < 3 ? monthA + 12 : monthA;
-            const sortOrderB = monthB < 3 ? monthB + 12 : monthB;
+            const sortOrderB = monthB < 3 ? monthB + 12 : sortOrderB;
             return sortOrderA - sortOrderB;
         });
         return sorted.map(item => ({ ...item, name: `${parseInt(item.date.split('-')[1])}月` }));
@@ -174,7 +178,9 @@ function RevenuePage() {
                         </ComposedChart>
                     </ResponsiveContainer>
                 )}
-                {!loading && !error && chartData.length === 0 && <p>表示するデータがありません。</p>}
+                {!loading && !error && chartData.length === 0 && (
+                    <p>表示するデータがありません。</p>
+                )}
             </div>
         </div>
     );
