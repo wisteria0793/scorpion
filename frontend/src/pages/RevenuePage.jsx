@@ -158,6 +158,7 @@ function RevenuePage() {
                             {selectedProperty === '' ? (
                                 // 全施設: 管理形態別の積み上げグラフ + 合計の折れ線グラフ
                                 <>
+                                    <Line type="monotone" yAxisId="left" dataKey="total" name="総売上" stroke="#ff7300" strokeWidth={2} dot={false}/>
                                     {managementTypeOptions.map((typeName, index) => (
                                         <Bar 
                                             key={typeName} 
@@ -167,7 +168,6 @@ function RevenuePage() {
                                             fill={COLORS[index % COLORS.length]} 
                                         />
                                     ))}
-                                    <Line type="monotone" yAxisId="left" dataKey="total" name="総売上" stroke="#ff7300" strokeWidth={2} dot={false}/>
                                 </>
                             ) : (
                                 // 特定施設: シンプルな棒グラフ
