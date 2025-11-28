@@ -35,15 +35,25 @@ const renderLegend = (props) => {
 const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
         const sortedPayload = [...payload].sort((a, b) => {
+            // 1. '総売上' を常に先頭に
             if (a.dataKey === 'total') return -1;
             if (b.dataKey === 'total') return 1;
+
+            // 2. '委託管理' を '自社管理' の前に
+            if (a.name === '委託管理' && b.name !== '委託管理') return -1; // aが委託管理でbが委託管理でないならaが先
+            if (b.name === '委託管理' && a.name !== '委託管理') return 1; // bが委託管理でaが委託管理でないならbが先
+
+            if (a.name === '自社管理' && b.name !== '自社管理') return 1; // aが自社管理でbが自社管理でないならaが後
+            if (b.name === '自社管理' && a.name !== '自社管理') return -1; // bが自社管理でaが自社管理でないならbが後
+
+            // 3. それ以外の項目はアルファベット順
             if (a.name < b.name) return -1;
             if (a.name > b.name) return 1;
             return 0;
         });
 
         return (
-            <div className="custom-tooltip-window">
+            <div className="custom-tooltip-window"> {/* custom-tooltip-window クラスを適用 */}
                 <p className="label">{`${label}`}</p>
                 <ul className="desc">
                     {sortedPayload.map((entry, index) => (
