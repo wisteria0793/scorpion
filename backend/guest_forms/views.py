@@ -111,10 +111,12 @@ class RevenueAPIView(APIView):
     """
 
     def get(self, request, *args, **kwargs):
-        # クエリパラメータから日付を取得
+        # クエリパラメータから日付とフィルター条件を取得
         start_date_str = request.query_params.get('start_date')
         end_date_str = request.query_params.get('end_date')
         group_by = request.query_params.get('group_by', 'month') # デフォルトは月別
+        property_name = request.query_params.get('property_name') # 追加: 施設名フィルター
+        selected_year = request.query_params.get('year') # 追加: 年度フィルター
 
         # 日付パラメータがなければ、今年の1月1日から今日までをデフォルトとする
         today = date.today()
@@ -136,8 +138,20 @@ class RevenueAPIView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
         
+        # property_nameとyearでrawDataをフィルター
+        filtered_data = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))
+        for p_name, year_data in raw_data.items():
+            if property_name and p_name != property_name:
+                continue # 指定された施設名と異なる場合はスキップ
+
+            for year, month_data in year_data.items():
+                if selected_year and int(year) != int(selected_year):
+                    continue # 指定された年度と異なる場合はスキップ
+
+                filtered_data[p_name][year] = month_data # フィルターを通ったデータを格納
+
         # group_by パラメータに応じてデータを整形
-        response_data = self._format_data(raw_data, group_by)
+        response_data = self._format_data(filtered_data, group_by)
 
         return Response(response_data)
 
@@ -176,6 +190,7 @@ class RevenueAPIView(APIView):
             # 月別の総売上
             # { "date": "2025-01", "revenue": 12345 }
             monthly_revenue = defaultdict(int)
+            # raw_data はすでに property_name と year でフィルターされていることを想定
             for facility_name, year_data in raw_data.items():
                 for year, month_data in year_data.items():
                     for month, revenue in month_data.items():
