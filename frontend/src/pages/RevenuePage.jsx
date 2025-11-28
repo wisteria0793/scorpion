@@ -96,7 +96,7 @@ function RevenuePage() {
 
     return (
         <div className="revenue-page">
-            <h1>月別 売上レポート</h1>
+            <h1>月別 売上レポート {selectedProperty ? `(${selectedProperty})` : '(全施設)'}</h1>
             
             <div className="filters">
                 <div className="filter-group">
@@ -163,7 +163,8 @@ function RevenuePage() {
                                     />
                                 </>
                             ) : (
-                                <Bar yAxisId="left" dataKey="revenue" name={selectedProperty} fill="#8884d8" />
+                                    // 特定施設: シンプルな棒グラフ
+                                <Bar yAxisId="left" dataKey="revenue" name="売上" fill="#8884d8" />
                             )}
                         </ComposedChart>
                     </ResponsiveContainer>
