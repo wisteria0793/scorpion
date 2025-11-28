@@ -6,6 +6,32 @@ import {
 } from 'recharts';
 import './RevenuePage.css';
 
+// カスタム凡例コンポーネント
+const renderLegend = (props) => {
+    const { payload } = props;
+    if (!payload || payload.length === 0) return null;
+
+    // '総売上' を先頭に持ってくるようにペイロードをソート
+    const sortedPayload = [...payload].sort((a, b) => {
+        if (a.value === '総売上') return -1;
+        if (b.value === '総売上') return 1;
+        if (a.value < b.value) return -1;
+        if (a.value > b.value) return 1;
+        return 0;
+    });
+
+    return (
+        <ul className="custom-legend">
+            {sortedPayload.map((entry, index) => (
+                <li key={`item-${index}`} className="custom-legend-item">
+                    <span className="legend-icon" style={{ backgroundColor: entry.color }}></span>
+                    {entry.value}
+                </li>
+            ))}
+        </ul>
+    );
+};
+
 function RevenuePage() {
     const [monthlyData, setMonthlyData] = useState([]);
     const [availableYears, setAvailableYears] = useState([]);
@@ -19,48 +45,50 @@ function RevenuePage() {
     const [selectedYear, setSelectedYear] = useState(getCurrentFiscalYear);
     const [selectedProperty, setSelectedProperty] = useState('');
 
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    // 初期化処理: 利用可能な年度と施設のリストを取得
+    // 初期化処理
     useEffect(() => {
         const currentYear = getCurrentFiscalYear();
         setAvailableYears([currentYear, currentYear - 1, currentYear - 2, currentYear - 3]);
 
         const fetchInitialData = async () => {
+            setLoading(true);
             try {
-                const initialData = await fetchRevenueData({ year: currentYear, property_name: '' });
-                const keys = new Set();
-                initialData.forEach(month => {
-                    Object.keys(month).forEach(key => {
-                        if (key !== 'date' && key !== 'name' && key !== 'total' && key !== 'revenue') {
-                            keys.add(key);
-                        }
-                    });
-                });
-                setAvailableProperties(Array.from(keys).sort());
+                // まずは現在の会計年度の全施設データを取得
+                const data = await fetchRevenueData({ year: currentYear, property_name: '' });
+                setMonthlyData(data);
+                
+                // 施設リストはハードコードで対応
+                setAvailableProperties(['巴.com', 'ONE PIECE HOUSE', '巴.com 3', '巴.com 5 Cafe&Stay', '巴.com プレミアムステイ', 'Guest house 巴.com hakodate motomachi']);
+                
             } catch (err) {
-                console.error("Failed to fetch initial property list", err);
+                console.error("Failed to fetch initial data", err);
+                setError('初期データの取得に失敗しました。');
+            } finally {
+                setLoading(false);
             }
         };
 
-        // このロジックは施設リスト取得の課題を解決するものではないが、
-        // 別の施設を選択した時に、その施設名がリストに含まれていないと不整合が起きるため、
-        // 動的に全施設名を取得するアプローチ自体は必要。
-        // 今回はmanagement_typeで集計するため、このロジックは一旦コメントアウト。
-        // fetchInitialData();
-    }, []);
+        fetchInitialData();
+    }, []); // マウント時に一度だけ実行
 
     // フィルター変更時に表示用データを再取得
     useEffect(() => {
+        // マウント時の初期ロードは上のuseEffectで行うので、ここでは実行しない
+        // ただし、ユーザーが初期表示後に再度同じ年度を選んだ場合も考慮し、
+        // 単純にマウント時の重複ロードを防ぐフラグは設けない
+        const initialLoad = loading && monthlyData.length === 0;
+        if (initialLoad) {
+            return;
+        }
+
         const loadData = async () => {
             setLoading(true);
             setError(null);
             try {
-                const params = {
-                    year: selectedYear,
-                    property_name: selectedProperty,
-                };
+                const params = { year: selectedYear, property_name: selectedProperty };
                 const data = await fetchRevenueData(params);
                 setMonthlyData(data);
             } catch (err) {
@@ -70,16 +98,15 @@ function RevenuePage() {
                 setLoading(false);
             }
         };
-
+        
         if (selectedYear) {
-            loadData();
+             loadData();
         }
     }, [selectedYear, selectedProperty]);
 
-    // グラフ用にデータを整形・ソート
+
     const chartData = useMemo(() => {
         if (!monthlyData || monthlyData.length === 0) return [];
-        
         const sorted = [...monthlyData].sort((a, b) => {
             const monthA = parseInt(a.date.split('-')[1]);
             const monthB = parseInt(b.date.split('-')[1]);
@@ -87,62 +114,42 @@ function RevenuePage() {
             const sortOrderB = monthB < 3 ? monthB + 12 : monthB;
             return sortOrderA - sortOrderB;
         });
-
-        return sorted.map(item => ({
-            ...item,
-            name: `${parseInt(item.date.split('-')[1])}月`,
-        }));
+        return sorted.map(item => ({ ...item, name: `${parseInt(item.date.split('-')[1])}月` }));
     }, [monthlyData]);
     
-    // データから動的に「管理形態」のキーを抽出
     const managementTypeOptions = useMemo(() => {
         if (monthlyData.length > 0 && selectedProperty === '') {
             const keys = new Set();
             monthlyData.forEach(month => {
                 Object.keys(month).forEach(key => {
-                    if (key !== 'date' && key !== 'name' && key !== 'total' && key !== 'revenue') {
-                        keys.add(key);
-                    }
+                    if (key !== 'date' && key !== 'name' && key !== 'total' && key !== 'revenue') keys.add(key);
                 });
             });
             return Array.from(keys).sort();
         }
         return [];
     }, [monthlyData, selectedProperty]);
-
-    // propertyOptionsは当面ハードコードで維持
-    const propertyOptions = useMemo(() => {
-        return ['巴.com', 'ONE PIECE HOUSE', '巴.com 3', '巴.com 5 Cafe&Stay', '巴.com プレミアムステイ'];
-    }, []);
-
-
+    
     const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088FE', '#00C49F'];
 
     return (
         <div className="revenue-page">
             <h1>月別 売上レポート {selectedProperty ? `(${selectedProperty})` : '(全施設)'}</h1>
-            
             <div className="filters">
                 <div className="filter-group">
                     <label htmlFor="selectedYear">会計年度:</label>
                     <select id="selectedYear" name="selectedYear" value={selectedYear} onChange={(e) => setSelectedYear(parseInt(e.target.value))}>
-                        {availableYears.map(year => (
-                            <option key={year} value={year}>{year}年度</option>
-                        ))}
+                        {availableYears.map(year => <option key={year} value={year}>{year}年度</option>)}
                     </select>
                 </div>
-
                 <div className="filter-group">
                     <label htmlFor="selectedProperty">施設:</label>
                     <select id="selectedProperty" name="selectedProperty" value={selectedProperty} onChange={(e) => setSelectedProperty(e.target.value)}>
                         <option value="">全施設</option>
-                        {propertyOptions.map(propName => (
-                            <option key={propName} value={propName}>{propName}</option>
-                        ))}
+                        {availableProperties.map(propName => <option key={propName} value={propName}>{propName}</option>)}
                     </select>
                 </div>
             </div>
-
             <div className="data-display">
                 {loading && <p>読み込み中...</p>}
                 {error && <p className="error">{error}</p>}
@@ -153,32 +160,21 @@ function RevenuePage() {
                             <XAxis dataKey="name" />
                             <YAxis yAxisId="left" tickFormatter={(value) => `¥${(value / 10000).toLocaleString()}万`} />
                             <Tooltip formatter={(value, name) => [`¥${value.toLocaleString()}`, name]} />
-                            <Legend />
-                            
+                            <Legend content={renderLegend} />
                             {selectedProperty === '' ? (
-                                // 全施設: 管理形態別の積み上げグラフ + 合計の折れ線グラフ
                                 <>
                                     <Line type="monotone" yAxisId="left" dataKey="total" name="総売上" stroke="#ff7300" strokeWidth={2} dot={false}/>
                                     {managementTypeOptions.map((typeName, index) => (
-                                        <Bar 
-                                            key={typeName} 
-                                            yAxisId="left"
-                                            dataKey={typeName} 
-                                            stackId="a" 
-                                            fill={COLORS[index % COLORS.length]} 
-                                        />
+                                        <Bar key={typeName} yAxisId="left" dataKey={typeName} stackId="a" fill={COLORS[index % COLORS.length]} />
                                     ))}
                                 </>
                             ) : (
-                                // 特定施設: シンプルな棒グラフ
                                 <Bar yAxisId="left" dataKey="revenue" name="売上" fill="#8884d8" />
                             )}
                         </ComposedChart>
                     </ResponsiveContainer>
                 )}
-                {!loading && !error && chartData.length === 0 && (
-                    <p>表示するデータがありません。</p>
-                )}
+                {!loading && !error && chartData.length === 0 && <p>表示するデータがありません。</p>}
             </div>
         </div>
     );
