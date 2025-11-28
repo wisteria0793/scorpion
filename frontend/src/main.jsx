@@ -4,6 +4,7 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import App from './App.jsx'; // メインのレイアウトコンポーネント
 import CheckInPage from './pages/CheckInPage';
 import GuestFormPage from './pages/GuestFormPage';
+import RevenuePage from './pages/RevenuePage'; // 追加
 import './index.css';
 
 const router = createBrowserRouter([
@@ -17,8 +18,12 @@ const router = createBrowserRouter([
     element: <CheckInPage />,
   },
   {
-    path: '/guest-form/:token', // フォームページのルート
+    path: '/guest-forms/:token', // フォームページのルート
     element: <GuestFormPage />,
+  },
+  {
+    path: '/revenue', // 売上レポートページのルートを追加
+    element: <RevenuePage />,
   },
 ]);
 

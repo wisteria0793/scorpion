@@ -4,9 +4,12 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.parsers import MultiPartParser, FormParser
+from datetime import datetime, date
+from collections import defaultdict
 
-from .models import Reservation, GuestSubmission
+from .models import Reservation, GuestSubmission, Property
 from .serializers import FormTemplateSerializer
+from .services import get_revenue_data
 
 class ReservationLookupView(APIView):
     """
@@ -100,3 +103,88 @@ class GuestFormSubmitView(APIView):
 
         except GuestSubmission.DoesNotExist:
             return Response({"error": "無効なトークンです。"}, status=status.HTTP_404_NOT_FOUND)
+
+
+class RevenueAPIView(APIView):
+    """
+    施設ごとの売上データを集計して提供するAPIビュー
+    """
+
+    def get(self, request, *args, **kwargs):
+        # クエリパラメータから日付を取得
+        start_date_str = request.query_params.get('start_date')
+        end_date_str = request.query_params.get('end_date')
+        group_by = request.query_params.get('group_by', 'month') # デフォルトは月別
+
+        # 日付パラメータがなければ、今年の1月1日から今日までをデフォルトとする
+        today = date.today()
+        try:
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date() if start_date_str else date(today.year, 1, 1)
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date() if end_date_str else today
+        except ValueError:
+            return Response(
+                {"error": "日付の形式は 'YYYY-MM-DD' にしてください。"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # サービス関数を呼び出してデータを取得
+        raw_data = get_revenue_data(start_date, end_date)
+
+        if raw_data is None:
+            return Response(
+                {"error": "Beds24 APIからのデータ取得に失敗しました。"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        
+        # group_by パラメータに応じてデータを整形
+        response_data = self._format_data(raw_data, group_by)
+
+        return Response(response_data)
+
+    def _format_data(self, raw_data, group_by):
+        """
+        取得した売上データを指定された粒度で集計・整形する
+        raw_data format: {facility_id: {year: {month: revenue}}}
+        """
+        if group_by == 'facility':
+            # 施設別の総売上
+            # { "facility_id": 1, "name": "施設A", "total_revenue": 12345 }
+            properties = {prop.id: prop.name for prop in Property.objects.all()}
+            result = []
+            for facility_id, year_data in raw_data.items():
+                total_revenue = sum(
+                    revenue
+                    for year, month_data in year_data.items()
+                    for month, revenue in month_data.items()
+                )
+                result.append({
+                    "facility_id": facility_id,
+                    "name": properties.get(facility_id, "不明な施設"),
+                    "total_revenue": total_revenue
+                })
+            return result
+        
+        elif group_by == 'year':
+            # 年度別の総売-売上
+            # { "year": 2025, "revenue": 123456 }
+            yearly_revenue = defaultdict(int)
+            for facility_id, year_data in raw_data.items():
+                for year, month_data in year_data.items():
+                    yearly_revenue[year] += sum(month_data.values())
+            
+            return [{"year": year, "revenue": revenue} for year, revenue in sorted(yearly_revenue.items())]
+
+        else: # default to 'month'
+            # 月別の総売上
+            # { "year": 2025, "month": 1, "revenue": 12345 }
+            monthly_revenue = defaultdict(int)
+            for facility_id, year_data in raw_data.items():
+                for year, month_data in year_data.items():
+                    for month, revenue in month_data.items():
+                         # yearとmonthを組み合わせたキーで集計
+                        monthly_revenue[f"{year}-{str(month).zfill(2)}"] += revenue
+            
+            return [
+                {"date": date_key, "revenue": revenue}
+                for date_key, revenue in sorted(monthly_revenue.items())
+            ]

@@ -115,10 +115,18 @@ USE_I18N = True
 USE_TZ = True
 
 
+
 # Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.2/howto/static-files/
+# https://docs.djangoproject.com/en/5.0/howto/static-files/
 
 STATIC_URL = 'static/'
+
+# Beds24 API Credentials
+# IMPORTANT: In a production environment, use environment variables
+# or a secrets management tool instead of hardcoding credentials.
+BEDS24_USERNAME = 'GuestHouseTomoe'
+BEDS24_PASSWORD = 'Hakodatetomoe.com4'
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
