@@ -105,201 +105,102 @@ class GuestFormSubmitView(APIView):
             return Response({"error": "無効なトークンです。"}, status=status.HTTP_404_NOT_FOUND)
 
 
+import calendar
+from datetime import date, timedelta
+
 class RevenueAPIView(APIView):
-
-
     """
-
-
-    指定された年度と施設（任意）の月別売上データを集計して提供するAPIビュー
-
-
+    指定された会計年度と施設（任意）の月別売上データを集計して提供するAPIビュー
+    会計年度は3月から翌年2月までとする。
     """
-
-
-
-
 
     def get(self, request, *args, **kwargs):
-
-
         try:
-
-
+            # フロントエンドから渡される「年度」は、会計年度の開始年とする (例: 2025年度は2025)
             selected_year = int(request.query_params.get('year', date.today().year))
-
-
         except (ValueError, TypeError):
-
-
             selected_year = date.today().year
-
-
-
-
 
         property_name = request.query_params.get('property_name')
 
-
-
-
-
-        start_date = date(selected_year, 1, 1)
-
-
-        end_date = date(selected_year, 12, 31)
-
-
-
-
+        # 会計年度の開始日と終了日を決定 (例: 2025年度 -> 2025-03-01 ~ 2026-02-28/29)
+        start_date = date(selected_year, 3, 1)
+        end_of_feb_next_year = date(selected_year + 1, 3, 1) - timedelta(days=1)
+        end_date = end_of_feb_next_year
 
         raw_data = get_revenue_data(start_date, end_date)
 
-
-
-
-
         if raw_data is None:
-
-
             return Response({"error": "Beds24 APIからのデータ取得に失敗しました。"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
-
-
-
         if property_name:
-
-
             # 特定の施設が指定されている場合
-
-
             filtered_data = {p_name: year_data for p_name, year_data in raw_data.items() if p_name == property_name}
-
-
-            response_data = self._format_for_single_property(filtered_data, selected_year)
-
-
+            response_data = self._format_for_single_property(filtered_data, start_date, end_date)
         else:
-
-
             # 全施設の場合（積み上げグラフ用のデータ形式）
-
-
-            response_data = self._format_for_stacked_chart(raw_data, selected_year)
-
-
-
-
+            response_data = self._format_for_stacked_chart(raw_data, start_date, end_date)
 
         return Response(response_data)
 
-
-
-
-
-    def _format_for_single_property(self, data, year):
-
-
+    def _format_for_single_property(self, data, start_date, end_date):
         """単一施設（または全施設の合算）の月別データを整形"""
-
-
         monthly_revenue = defaultdict(int)
-
-
         for facility_name, year_data in data.items():
-
-
-            if year in year_data:
-
-
-                for month, revenue in year_data[year].items():
-
-
-                    monthly_revenue[month] += revenue
-
-
+            for year, month_data in year_data.items():
+                for month, revenue in month_data.items():
+                     # yearとmonthを組み合わせたキーで集計
+                    monthly_revenue[f"{year}-{str(month).zfill(2)}"] += revenue
         
-
-
         result = []
-
-
-        for month_num in range(1, 13):
-
-
+        current_date = start_date
+        while current_date <= end_date:
+            date_key = current_date.strftime('%Y-%m')
             result.append({
-
-
-                "date": f"{year}-{str(month_num).zfill(2)}",
-
-
-                "revenue": monthly_revenue.get(month_num, 0)
-
-
+                "date": date_key,
+                "revenue": monthly_revenue.get(date_key, 0)
             })
-
-
+            # 次の月へ
+            next_month = current_date.month + 1
+            next_year = current_date.year
+            if next_month > 12:
+                next_month = 1
+                next_year += 1
+            current_date = date(next_year, next_month, 1)
+            
         return result
 
-
-
-
-
-    def _format_for_stacked_chart(self, data, year):
-
-
-        """積み上げ棒グラフ用に、施設名をキーにした月別データを整形"""
-
-
-        # { "YYYY-MM": { "施設A": 100, "施設B": 200 } } という形式の中間データを作成
-
-
+    def _format_for_stacked_chart(self, data, start_date, end_date):
+        """積み上げ棒グラフ用に、施設名をキーにした月別データを整形し、合計も追加"""
         pivoted_data = defaultdict(lambda: defaultdict(int))
-
-
         for facility_name, year_data in data.items():
-
-
-            if year in year_data:
-
-
+            for year, month_data in year_data.items():
                 for month, revenue in year_data[year].items():
-
-
                     date_key = f"{year}-{str(month).zfill(2)}"
-
-
                     pivoted_data[date_key][facility_name] = revenue
-
-
         
-
-
         result = []
-
-
-        for month_num in range(1, 13):
-
-
-            date_key = f"{year}-{str(month_num).zfill(2)}"
-
-
-            # 月ごとのオブジェクトを作成し、'date' キーを追加
-
-
+        current_date = start_date
+        while current_date <= end_date:
+            date_key = current_date.strftime('%Y-%m')
             month_data = {"date": date_key}
-
-
-            month_data.update(pivoted_data.get(date_key, {}))
-
-
+            
+            # 月ごとの施設別売上と合計を計算
+            details = pivoted_data.get(date_key, {})
+            total = sum(details.values())
+            month_data.update(details)
+            month_data['total'] = total
+            
             result.append(month_data)
 
-
+            # 次の月へ
+            next_month = current_date.month + 1
+            next_year = current_date.year
+            if next_month > 12:
+                next_month = 1
+                next_year += 1
+            current_date = date(next_year, next_month, 1)
             
-
-
         return result
 
 
