@@ -144,31 +144,29 @@ class RevenueAPIView(APIView):
     def _format_data(self, raw_data, group_by):
         """
         取得した売上データを指定された粒度で集計・整形する
-        raw_data format: {facility_id: {year: {month: revenue}}}
+        raw_data format: {facility_name: {year: {month: revenue}}}
         """
         if group_by == 'facility':
             # 施設別の総売上
-            # { "facility_id": 1, "name": "施設A", "total_revenue": 12345 }
-            properties = {prop.id: prop.name for prop in Property.objects.all()}
+            # { "name": "施設A", "total_revenue": 12345 }
             result = []
-            for facility_id, year_data in raw_data.items():
+            for facility_name, year_data in raw_data.items():
                 total_revenue = sum(
                     revenue
                     for year, month_data in year_data.items()
                     for month, revenue in month_data.items()
                 )
                 result.append({
-                    "facility_id": facility_id,
-                    "name": properties.get(facility_id, "不明な施設"),
+                    "name": facility_name,
                     "total_revenue": total_revenue
                 })
             return result
         
         elif group_by == 'year':
-            # 年度別の総売-売上
+            # 年度別の総売上
             # { "year": 2025, "revenue": 123456 }
             yearly_revenue = defaultdict(int)
-            for facility_id, year_data in raw_data.items():
+            for facility_name, year_data in raw_data.items():
                 for year, month_data in year_data.items():
                     yearly_revenue[year] += sum(month_data.values())
             
@@ -176,9 +174,9 @@ class RevenueAPIView(APIView):
 
         else: # default to 'month'
             # 月別の総売上
-            # { "year": 2025, "month": 1, "revenue": 12345 }
+            # { "date": "2025-01", "revenue": 12345 }
             monthly_revenue = defaultdict(int)
-            for facility_id, year_data in raw_data.items():
+            for facility_name, year_data in raw_data.items():
                 for year, month_data in year_data.items():
                     for month, revenue in month_data.items():
                          # yearとmonthを組み合わせたキーで集計
