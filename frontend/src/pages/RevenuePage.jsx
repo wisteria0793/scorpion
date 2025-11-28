@@ -34,26 +34,22 @@ const renderLegend = (props) => {
 // カスタムツールチップコンポーネント (ホバー時)
 const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
+        // ユーザーの要望通りの表示順を定義
+        const desiredOrder = ['総売上', '委託管理', '自社管理'];
+
         const sortedPayload = [...payload].sort((a, b) => {
-            // 1. '総売上' を常に先頭に
-            if (a.dataKey === 'total') return -1;
-            if (b.dataKey === 'total') return 1;
+            const indexA = desiredOrder.indexOf(a.name);
+            const indexB = desiredOrder.indexOf(b.name);
 
-            // 2. '委託管理' を '自社管理' の前に
-            if (a.name === '委託管理' && b.name !== '委託管理') return -1; // aが委託管理でbが委託管理でないならaが先
-            if (b.name === '委託管理' && a.name !== '委託管理') return 1; // bが委託管理でaが委託管理でないならbが先
+            // desiredOrder にない項目は後ろに回す
+            if (indexA === -1) return 1;
+            if (indexB === -1) return -1;
 
-            if (a.name === '自社管理' && b.name !== '自社管理') return 1; // aが自社管理でbが自社管理でないならaが後
-            if (b.name === '自社管理' && a.name !== '自社管理') return -1; // bが自社管理でaが自社管理でないならbが後
-
-            // 3. それ以外の項目はアルファベット順
-            if (a.name < b.name) return -1;
-            if (a.name > b.name) return 1;
-            return 0;
+            return indexA - indexB;
         });
 
         return (
-            <div className="custom-tooltip-window"> {/* custom-tooltip-window クラスを適用 */}
+            <div className="custom-tooltip-window">
                 <p className="label">{`${label}`}</p>
                 <ul className="desc">
                     {sortedPayload.map((entry, index) => (
