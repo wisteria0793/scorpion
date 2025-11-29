@@ -1,11 +1,12 @@
 // src/pages/RevenuePage.jsx
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { fetchRevenueData } from '../services/revenueApi';
+import { fetchRevenueData, getLastSyncTime } from '../services/revenueApi'; // getLastSyncTime をインポート
 import {
     ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
 import './RevenuePage.css';
 
+// (省略) ... カスタム凡例・ツールチップコンポーネントは変更なし ...
 // カスタム凡例コンポーネント (グラフ下)
 const renderLegend = (props) => {
     const { payload } = props;
@@ -74,11 +75,15 @@ const CustomTooltip = ({ active, payload, label }) => {
     return null;
 };
 
+
 function RevenuePage() {
     const [monthlyData, setMonthlyData] = useState([]);
     const [availableYears, setAvailableYears] = useState([]);
     const [availableProperties, setAvailableProperties] = useState([]);
     
+    const [lastSyncTime, setLastSyncTime] = useState(null); // 最終同期時刻用のstate
+    const [syncTimeLoading, setSyncTimeLoading] = useState(true);
+
     const getCurrentFiscalYear = () => {
         const today = new Date();
         return today.getMonth() < 2 ? today.getFullYear() - 1 : today.getFullYear();
@@ -89,14 +94,29 @@ function RevenuePage() {
 
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const isInitialLoad = useRef(true);
 
+    // 初期データロード (会計年度リスト、施設リスト、最終同期時刻)
     useEffect(() => {
         const currentYear = getCurrentFiscalYear();
-        setAvailableYears([currentYear, currentYear - 1, currentYear - 2, currentYear - 3]);
+        setAvailableYears([currentYear + 1, currentYear, currentYear - 1, currentYear - 2, currentYear - 3]);
         setAvailableProperties(['ゲストハウス巴.com', 'ONE PIECE HOUSE', '巴.com3 Music&Stay', '巴.com4 Motomachi', '巴.com5 Cafe&Stay', '巴.com PremiumStay', 'mimosa', 'Iris']);
+        
+        const loadSyncTime = async () => {
+            try {
+                setSyncTimeLoading(true);
+                const data = await getLastSyncTime();
+                setLastSyncTime(data.last_sync_time);
+            } catch (err) {
+                console.error("Failed to load last sync time:", err);
+                setLastSyncTime(null); // エラー時はnullのまま
+            } finally {
+                setSyncTimeLoading(false);
+            }
+        };
+        loadSyncTime();
     }, []);
 
+    // グラフデータロード
     useEffect(() => {
         const loadData = async () => {
             setLoading(true);
@@ -144,9 +164,25 @@ function RevenuePage() {
     
     const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088FE', '#00C49F'];
 
+    // 最終更新日時をフォーマットする関数
+    const formatSyncTime = (timeString) => {
+        if (!timeString) return '不明';
+        const date = new Date(timeString);
+        return date.toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    };
+
     return (
         <div className="revenue-page">
-            <h1>月別 売上レポート {selectedProperty ? `(${selectedProperty})` : '(全施設)'}</h1>
+            <div className="page-header">
+                <h1>月別 売上レポート {selectedProperty ? `(${selectedProperty})` : '(全施設)'}</h1>
+                <div className="sync-status">
+                    {syncTimeLoading ? (
+                        <span>最終更新日時: 読み込み中...</span>
+                    ) : (
+                        <span>最終更新日時: {formatSyncTime(lastSyncTime)}</span>
+                    )}
+                </div>
+            </div>
             <div className="filters">
                 <div className="filter-group">
                     <label htmlFor="selectedYear">会計年度:</label>

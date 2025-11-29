@@ -1,7 +1,7 @@
 # backend/guest_forms/admin.py
 
 from django.contrib import admin
-from .models import Property, Reservation, FormTemplate, FormField, GuestSubmission, Amenity, FacilityImage
+from .models import Property, FormTemplate, FormField, GuestSubmission, Amenity, FacilityImage
 
 class FormFieldInline(admin.TabularInline):
     model = FormField
@@ -28,11 +28,7 @@ class PropertyAdmin(admin.ModelAdmin):
     prepopulated_fields = {'slug': ('name',)} # nameからslugを自動生成
     inlines = [FacilityImageInline] # FacilityImageをインラインで追加
 
-@admin.register(Reservation)
-class ReservationAdmin(admin.ModelAdmin):
-    list_display = ('property', 'check_in_date', 'guest_name', 'guest_roster_status')
-    list_filter = ('guest_roster_status', 'property')
-    search_fields = ('guest_name', 'guest_email')
+
 
 @admin.register(GuestSubmission)
 class GuestSubmissionAdmin(admin.ModelAdmin):

@@ -51,3 +51,17 @@ export const fetchProperties = async () => {
         throw error;
     }
 }
+
+/**
+ * 最終同期時刻をバックエンドから取得する
+ * @returns {Promise<object>} - 最終同期時刻を含むオブジェクト
+ */
+export const getLastSyncTime = async () => {
+  try {
+    const response = await apiClient.get('/sync-status/');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching last sync time:', error);
+    throw error;
+  }
+};

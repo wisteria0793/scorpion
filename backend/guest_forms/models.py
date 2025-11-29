@@ -96,50 +96,12 @@ class FacilityImage(models.Model):
     def __str__(self):
         return f"{self.property.name} - Image {self.order}"
 
-class Reservation(models.Model):
-    class RosterStatus(models.TextChoices):
-        PENDING = 'pending', '未提出'
-        SUBMITTED = 'submitted', '提出済'
-        VERIFIED = 'verified', '確認済'
-
-    # Beds24からの主要なデータ
-    beds24_book_id = models.IntegerField(unique=True, null=True, verbose_name="Beds24予約ID", help_text="Beds24の'bookId'")
-    status = models.CharField(max_length=50, verbose_name="予約ステータス", null=True, blank=True, help_text="Beds24の'Status'")
-    total_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, verbose_name="合計料金", help_text="Beds24の'Price'")
-    
-    # 予約に関する詳細情報
-    property = models.ForeignKey(Property, on_delete=models.CASCADE, related_name='reservations', verbose_name="施設")
-    check_in_date = models.DateField(verbose_name="チェックイン日", help_text="Beds24の'First Night'")
-    check_out_date = models.DateField(null=True, verbose_name="チェックアウト日", help_text="Beds24の'Last Night'")
-    num_guests = models.IntegerField(default=1, verbose_name="宿泊者数", help_text="Beds24の'Number of Guests'")
-
-    # ゲスト情報
-    guest_name = models.CharField(max_length=255, verbose_name="予約者名", null=True, blank=True, help_text="Beds24の'Guest Name'")
-    guest_email = models.EmailField(verbose_name="予約者メールアドレス", null=True, blank=True)
-    
-    # システム内部のステータス
-    guest_roster_status = models.CharField(
-        max_length=20, choices=RosterStatus.choices, default=RosterStatus.PENDING, verbose_name="名簿提出状況"
-    )
-    
-    # タイムスタンプ
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name="作成日時")
-    updated_at = models.DateTimeField(auto_now=True, verbose_name="更新日時")
-
-    class Meta:
-        verbose_name = "予約"
-        verbose_name_plural = "予約"
-        ordering = ['-check_in_date']
-
-    def __str__(self):
-        return f"{self.property.name} - {self.check_in_date} (Beds24 ID: {self.beds24_book_id})"
-
 class GuestSubmission(models.Model):
     class SubmissionStatus(models.TextChoices):
         PENDING = 'pending', '入力待'
         COMPLETED = 'completed', '提出完了'
 
-    reservation = models.OneToOneField(Reservation, on_delete=models.CASCADE, verbose_name="予約")
+    reservation = models.OneToOneField('reservations.Reservation', on_delete=models.CASCADE, verbose_name="予約")
     token = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, verbose_name="フォームアクセス用トークン")
     status = models.CharField(max_length=20, choices=SubmissionStatus.choices, default=SubmissionStatus.PENDING, verbose_name="提出状況")
     submitted_data = models.JSONField(null=True, blank=True, verbose_name="提出データ")
@@ -151,4 +113,4 @@ class GuestSubmission(models.Model):
         verbose_name_plural = "名簿提出内容"
 
     def __str__(self):
-        return f"Submission for {self.reservation}"
+        return f"Submission for {self.reservation}"    
