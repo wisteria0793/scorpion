@@ -11,6 +11,8 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import './index.css';
 
+const router = createBrowserRouter([
+  {
     path: '/login',
     element: <LoginPage />,
   },
@@ -18,7 +20,6 @@ import './index.css';
     path: '/register',
     element: <RegisterPage />,
   },
-const router = createBrowserRouter([
   {
     path: '/',
     element: <App />,
