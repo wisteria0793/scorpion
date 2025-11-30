@@ -62,3 +62,16 @@ python manage.py import_past_bookings --start-date 2023-03-01 --end-date 2024-02
 **注意点:**
 - このコマンドは、すでに存在する予約データを上書き（更新）する可能性があります。
 - 非常に長期間を指定すると、APIからのデータ取得に時間がかかる場合があります。
+
+## 4. 認証 API と CSRF ハンドリング
+
+このプロジェクトの認証エンドポイントはセッションベースの認証を採用しており、ブラウザ経由の状態変更リクエストは CSRF 保護の対象です。
+
+フロントエンド (SPA) から安全に POST リクエストを投げるための推奨フロー:
+
+1. フロントは起動時に `/api/auth/csrf/` (GET) を叩き、サーバから `csrftoken` cookie を受け取ります（`credentials: 'include'` を必ずつけること）。
+2. フロントは cookie から `csrftoken` を読み取り、状態変更系のリクエスト（POST/PUT/DELETE 等）に `X-CSRFToken` ヘッダとして付与します。
+3. サーバは通常どおり Django の CSRF ミドルウェアで `X-CSRFToken` を検証します。
+
+DRF の SessionAuthentication を使う場合、上記の仕組みでブラウザから安全にセッションベースの認証を利用できます。開発中に簡便さを優先して `csrf_exempt` を使うときもありますが、本番では CSRF を正しく扱うことを強く推奨します。
+
