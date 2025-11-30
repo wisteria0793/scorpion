@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders', # 追加
     'guest_forms',
+    'accounts',
     'reservations',
 ]
 
@@ -146,10 +147,20 @@ CORS_ALLOWED_ORIGINS = [
 ]
 CORS_ALLOW_CREDENTIALS = True # クッキーなどの資格情報を許可する場合
 
+<<<<<<< HEAD
 # Django's CSRF origin check (Django >=4) compares request Origin header against
 # CSRF_TRUSTED_ORIGINS when present. For development we allow the frontend dev
 # server so POST requests from the SPA are accepted.
 CSRF_TRUSTED_ORIGINS = [
     'http://localhost:5173',
     'http://127.0.0.1:5173',
+=======
+# Django's CSRF origin check compares request Origin header against
+# CSRF_TRUSTED_ORIGINS when present. For local development we need to add
+# the frontend dev server address so requests from http://localhost:5173 are
+# accepted by Django's CSRF validation.
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+>>>>>>> origin/main
 ]
