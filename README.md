@@ -142,5 +142,54 @@ macOSでの環境構築手順です。
     python manage.py runserver
     ```
     起動後、ブラウザで `http://localhost:8000` にアクセスすると、Djangoのデフォルトページが表示されます。 
+## 開発用：認証（ログイン / 登録）デモ手順
+
+このリポジトリには、フロントエンドとバックエンドで認証フローを実装しています。ローカルで動かして動作を確認する手順をまとめます。
+
+前提:
+- Django は仮想環境内にインストール済みで、`python manage.py migrate` が実行済みであること
+- フロントエンドの依存は `npm install` 済み
+
+1. バックエンドを起動（デフォルトポート: 8000）
+
+```bash
+cd backend
+source venv/bin/activate   # 仮想環境を使う場合
+python manage.py runserver
+```
+
+2. フロントエンドを起動（デフォルトポート: 5173）
+
+```bash
+cd frontend
+npm run dev
+```
+
+3. ブラウザでフロントエンドを開き、以下のページを確認
+- http://localhost:5173/register  — 新規登録フォーム
+- http://localhost:5173/login     — ログインフォーム
+
+注意点: この実装は「セッションベースの認証」を使用し、フロントエンドは API へ withCredentials を有効にして呼び出しています。開発で簡便に動かすため、`/api/auth/register` と `/api/auth/login` は CSRF exemption を一時的に設定しています。本番環境では CSRF 管理と HTTPS の設定を必ず行ってください。
+
+簡易確認（curl を使った API 動作確認）
+
+ユーザ登録:
+
+```bash
+curl -X POST http://localhost:8000/api/auth/register/ -H "Content-Type: application/json" -d '{"username":"tester","email":"tester@example.com","password":"s3cur3pass","password2":"s3cur3pass"}' -c cookies.txt
+```
+
+ログイン（cookie 保存）:
+
+```bash
+curl -X POST http://localhost:8000/api/auth/login/ -H "Content-Type: application/json" -d '{"username":"tester","password":"s3cur3pass"}' -b cookies.txt -c cookies.txt
+```
+
+現在のユーザ情報取得:
+
+```bash
+curl http://localhost:8000/api/auth/me/ -b cookies.txt
+```
+
 
 

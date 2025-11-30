@@ -62,3 +62,36 @@ python manage.py import_past_bookings --start-date 2023-03-01 --end-date 2024-02
 **注意点:**
 - このコマンドは、すでに存在する予約データを上書き（更新）する可能性があります。
 - 非常に長期間を指定すると、APIからのデータ取得に時間がかかる場合があります。
+
+## 4. 認証 API (追加)
+
+このプロジェクトでは、フロントエンドからのログイン/登録を簡易に実装するために、以下のエンドポイントを提供しています（開発用実装）。
+
+- POST /api/auth/register/ — ユーザ登録
+	- ボディ: { username, email?, password, password2 }
+	- レスポンス: 作成したユーザの基本情報 (id, username, email)
+
+- POST /api/auth/login/ — ログイン（セッションベース）
+	- ボディ: { username, password }
+	- レスポンス: ログインしたユーザの基本情報 (id, username, email)
+	- 成功時にサーバがセッションクッキーをセットします。フロントエンドからは withCredentials を付けてリクエストしてください。
+
+- POST /api/auth/logout/ — ログアウト
+	- レスポンス: 204 No Content
+
+- GET /api/auth/me/ — 現在のログインユーザ情報
+	- レスポンス: ログイン中のユーザ情報 (id, username, email)
+
+注意: 現在の実装では `register` と `login` エンドポイントを CSRF exempt にしており、ブラウザからクロスオリジン XHR で呼び出しやすいようにしています。これは開発利便性のためであり、本番運用では CSRF 対策（CSRF トークンのやり取りやトークンベース認証の導入）を検討してください。
+
+テスト:
+
+```bash
+# backend ディレクトリで仮想環境を有効にして、依存を準備した後にテストを実行してください
+cd backend
+source venv/bin/activate
+pip install -r requirements.txt  # (必要なら)
+python manage.py test accounts
+```
+
+※ この開発環境のコンテナでは Django がインストールされていないため、CI やローカルで上記テストを実行して動作確認してください。
