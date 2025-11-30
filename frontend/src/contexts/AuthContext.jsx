@@ -19,9 +19,30 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // try to fetch current user when app loads
+    // ensure CSRF cookie exists then try to fetch current user when app loads
     async function loadUser() {
       try {
+        // request CSRF cookie to be set by the server (must include credentials)
+        try {
+          await fetch('http://localhost:8000/api/auth/csrf/', { credentials: 'include' });
+        } catch (e) {
+          // ignore - csrf endpoint might fail in some envs
+        }
+
+        // set axios default header for CSRF using document cookie
+        try {
+          const match = document.cookie.match('(^|;)\\s*' + 'csrftoken' + '\\s*=\\s*([^;]+)');
+          const csrf = match ? match.pop() : '';
+          if (csrf) {
+            // set default header for subsequent requests
+            // eslint-disable-next-line global-require
+            const apiClient = require('../services/authApi').default;
+            apiClient.defaults.headers.common['X-CSRFToken'] = csrf;
+          }
+        } catch (e) {
+          // ignore - may run in non-browser environments during tests
+        }
+
         const resp = await authApi.me();
         setUser(resp.data);
       } catch (err) {
