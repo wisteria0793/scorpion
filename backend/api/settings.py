@@ -11,16 +11,21 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+import os
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# .envファイルから環境変数を読み込む
+load_dotenv(BASE_DIR / '.env')
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-6bextc*j3yuin!qpus6dzy&lm2&t(ph4=efjp1m+v5!f2=n$z('
+SECRET_KEY = os.getenv('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -125,8 +130,8 @@ STATIC_URL = 'static/'
 # Beds24 API Credentials
 # IMPORTANT: In a production environment, use environment variables
 # or a secrets management tool instead of hardcoding credentials.
-BEDS24_USERNAME = 'GuestHouseTomoe'
-BEDS24_PASSWORD = 'Hakodatetomoe.com4'
+BEDS24_USERNAME = os.getenv('BEDS24_USERNAME')
+BEDS24_PASSWORD = os.getenv('BEDS24_PASSWORD')
 
 
 # Default primary key field type
