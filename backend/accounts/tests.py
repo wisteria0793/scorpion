@@ -20,12 +20,16 @@ class AccountsTests(APITestCase):
             'password': 's3cur3pass',
             'password2': 's3cur3pass'
         }
-        resp = self.client.post(register_url, data, format='json')
+        # get CSRF cookie first
+        self.client.get(reverse('accounts:csrf'))
+        csrftoken = self.client.cookies.get('csrftoken').value
+        resp = self.client.post(register_url, data, format='json', HTTP_X_CSRFTOKEN=csrftoken)
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
         self.assertEqual(User.objects.filter(username='testuser').count(), 1)
 
         # Login
-        resp = self.client.post(login_url, {'username': 'testuser', 'password': 's3cur3pass'}, format='json')
+        csrftoken = self.client.cookies.get('csrftoken').value
+        resp = self.client.post(login_url, {'username': 'testuser', 'password': 's3cur3pass'}, format='json', HTTP_X_CSRFTOKEN=csrftoken)
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
         # Check current user (requires authentication)
@@ -41,10 +45,12 @@ class AccountsTests(APITestCase):
             'password': 's3cur3pass',
             'password2': 's3cur3pass'
         }
-        resp = self.client.post(url, data, format='json')
+        self.client.get(reverse('accounts:csrf'))
+        csrftoken = self.client.cookies.get('csrftoken').value
+        resp = self.client.post(url, data, format='json', HTTP_X_CSRFTOKEN=csrftoken)
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
 
         # attempt to register again with same username
-        resp2 = self.client.post(url, data, format='json')
+        resp2 = self.client.post(url, data, format='json', HTTP_X_CSRFTOKEN=csrftoken)
         self.assertEqual(resp2.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('username', resp2.data)

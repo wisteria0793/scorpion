@@ -4,12 +4,11 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.utils.decorators import method_decorator
-from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 
 from .serializers import RegisterSerializer, UserSerializer
 
 
-@method_decorator(csrf_exempt, name='dispatch')
 class RegisterView(APIView):
     permission_classes = [AllowAny]
 
@@ -20,7 +19,6 @@ class RegisterView(APIView):
         return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
 
 
-@method_decorator(csrf_exempt, name='dispatch')
 class LoginView(APIView):
     permission_classes = [AllowAny]
 
@@ -49,3 +47,18 @@ class CurrentUserView(APIView):
 
     def get(self, request, *args, **kwargs):
         return Response(UserSerializer(request.user).data, status=status.HTTP_200_OK)
+
+
+@method_decorator(ensure_csrf_cookie, name='dispatch')
+class CsrfTokenView(APIView):
+    """GET this endpoint to ensure the CSRF cookie is set on the client.
+
+    The view is a no-op but ensures Django sets the `csrftoken` cookie so
+    single-page apps can fetch it (with credentials) and send it in
+    X-CSRFToken headers for subsequent state-changing requests.
+    """
+
+    permission_classes = [AllowAny]
+
+    def get(self, request, *args, **kwargs):
+        return Response({"detail": "CSRF cookie set"}, status=status.HTTP_200_OK)
