@@ -146,3 +146,12 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173", # フロントエンドのURL
 ]
 CORS_ALLOW_CREDENTIALS = True # クッキーなどの資格情報を許可する場合
+
+# Django's CSRF origin check compares request Origin header against
+# CSRF_TRUSTED_ORIGINS when present. For local development we need to add
+# the frontend dev server address so requests from http://localhost:5173 are
+# accepted by Django's CSRF validation.
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
