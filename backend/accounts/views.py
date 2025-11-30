@@ -30,6 +30,8 @@ class LoginView(APIView):
         user = authenticate(request, username=username, password=password)
         if user is None:
             return Response({"detail": "Invalid credentials"}, status=status.HTTP_400_BAD_REQUEST)
+        if not user.is_active:
+            return Response({"detail": "User account is disabled"}, status=status.HTTP_403_FORBIDDEN)
         login(request, user)
         return Response(UserSerializer(user).data, status=status.HTTP_200_OK)
 
