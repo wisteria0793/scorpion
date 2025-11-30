@@ -5,21 +5,27 @@ const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  withCredentials: true, // allow cookies (session-based auth)
+  withCredentials: true,
 });
 
-export const register = ({ username, email, password, password2 }) => {
-  return apiClient.post('/auth/register/', { username, email, password, password2 });
-};
+export const register = ({ username, email, password, password2 }) =>
+  apiClient.post('/auth/register/', { username, email, password, password2 });
 
-export const login = ({ username, password }) => {
-  return apiClient.post('/auth/login/', { username, password });
-};
+export const login = ({ username, password }) =>
+  apiClient.post('/auth/login/', { username, password });
+
+export const me = () => apiClient.get('/auth/me/');
 
 export const logout = () => {
-  return apiClient.post('/auth/logout/');
+  // read csrftoken from document.cookie in the browser
+  const getCookie = (name) => {
+    if (typeof document === 'undefined') return '';
+    const match = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+    return match ? match.pop() : '';
+  };
+
+  const token = getCookie('csrftoken');
+  return apiClient.post('/auth/logout/', {}, { headers: { 'X-CSRFToken': token } });
 };
 
-export const me = () => {
-  return apiClient.get('/auth/me/');
-};
+export default apiClient;
