@@ -5,6 +5,10 @@ export const getProperties = () => {
   return apiClient.get('/properties/');
 };
 
+export const getProperty = (id) => {
+  return apiClient.get(`/properties/${id}/`);
+};
+
 export const createProperty = (property) => {
   return apiClient.post('/properties/', property);
 };

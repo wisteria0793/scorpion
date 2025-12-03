@@ -1,0 +1,27 @@
+/* src/components/Accordion.css */
+.accordion-section {
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  margin-bottom: var(--spacing-md);
+  background-color: var(--surface-color);
+  box-shadow: var(--box-shadow-sm);
+}
+
+.accordion-header {
+  background-color: var(--background-color);
+  padding: var(--spacing-md);
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+}
+
+.accordion-header:hover {
+  background-color: #e9ecef;
+}
+
+.accordion-content {
+  padding: var(--spacing-lg);
+  border-top: 1px solid var(--border-color);
+}

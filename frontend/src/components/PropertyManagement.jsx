@@ -1,6 +1,7 @@
 // src/components/PropertyManagement.jsx
 import React, { useState, useEffect } from 'react';
-import { getProperties, createProperty, updateProperty, deleteProperty, getImages, uploadImage, deleteImage } from '../services/propertyApi';
+import { useNavigate } from 'react-router-dom';
+import { getProperties, deleteProperty, getImages, uploadImage, deleteImage } from '../services/propertyApi';
 import './PropertyManagement.css';
 
 const ImageManagementModal = ({ property, onClose }) => {
@@ -22,8 +23,10 @@ const ImageManagementModal = ({ property, onClose }) => {
     };
 
     useEffect(() => {
-        fetchImages();
-    }, [property.id]);
+        if (property) {
+            fetchImages();
+        }
+    }, [property]);
 
     const handleFileChange = async (e) => {
         const file = e.target.files[0];
@@ -76,112 +79,20 @@ const ImageManagementModal = ({ property, onClose }) => {
                             </div>
                         ))
                     }
+                     {images.length === 0 && !loading && <p>画像がありません。</p>}
                 </div>
             </div>
         </div>
     );
 };
-
-
-const PropertyForm = ({ property, onSave, onCancel }) => {
-    const [formData, setFormData] = useState({});
-
-    useEffect(() => {
-        setFormData(property || {
-            name: '',
-            slug: '',
-            beds24_property_key: '',
-            management_type: '',
-            address: '',
-            capacity: 0,
-            num_parking: 0,
-            google_map_url: '',
-            check_in_time: '15:00',
-            check_out_time: '10:00',
-            description: '',
-        });
-    }, [property]);
-
-    const handleChange = (e) => {
-        const { name, value, type } = e.target;
-        setFormData(prev => ({ ...prev, [name]: type === 'number' ? parseInt(value, 10) : value }));
-    };
-
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        onSave(formData);
-    };
-
-    return (
-        <div className="modal">
-            <div className="modal-content">
-                <div className="modal-header">
-                    <h2>{property ? '施設情報の編集' : '新しい施設を登録'}</h2>
-                    <span className="close-button" onClick={onCancel}>&times;</span>
-                </div>
-                <form onSubmit={handleSubmit} className="property-form">
-                    <div className="form-group">
-                        <label>施設名</label>
-                        <input name="name" value={formData.name || ''} onChange={handleChange} required />
-                    </div>
-                    <div className="form-group">
-                        <label>URL識別子 (slug)</label>
-                        <input name="slug" value={formData.slug || ''} onChange={handleChange} required />
-                    </div>
-                    <div className="form-group">
-                        <label>Beds24プロパティキー</label>
-                        <input name="beds24_property_key" value={formData.beds24_property_key || ''} onChange={handleChange} />
-                    </div>
-                     <div className="form-group">
-                        <label>管理形態</label>
-                        <input name="management_type" value={formData.management_type || ''} onChange={handleChange} />
-                    </div>
-                    <div className="form-group">
-                        <label>住所</label>
-                        <input name="address" value={formData.address || ''} onChange={handleChange} />
-                    </div>
-                    <div className="form-group">
-                        <label>最大収容人数</label>
-                        <input type="number" name="capacity" value={formData.capacity || 0} onChange={handleChange} />
-                    </div>
-                    <div className="form-group">
-                        <label>駐車台数</label>
-                        <input type="number" name="num_parking" value={formData.num_parking || 0} onChange={handleChange} />
-                    </div>
-                    <div className="form-group">
-                        <label>チェックイン時刻</label>
-                        <input type="time" name="check_in_time" value={formData.check_in_time || ''} onChange={handleChange} />
-                    </div>
-                    <div className="form-group">
-                        <label>チェックアウト時刻</label>
-                        <input type="time" name="check_out_time" value={formData.check_out_time || ''} onChange={handleChange} />
-                    </div>
-                    <div className="form-group">
-                        <label>施設説明</label>
-                        <textarea name="description" value={formData.description || ''} onChange={handleChange} rows="4"></textarea>
-                    </div>
-                    <div className="form-group">
-                        <label>Google Map URL</label>
-                        <textarea name="google_map_url" value={formData.google_map_url || ''} onChange={handleChange} rows="2"></textarea>
-                    </div>
-                    <button type="submit" className="btn-primary">保存</button>
-                    <button type="button" onClick={onCancel}>キャンセル</button>
-                </form>
-            </div>
-        </div>
-    );
-};
-
 
 function PropertyManagement() {
     const [properties, setProperties] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [isFormOpen, setIsFormOpen] = useState(false);
-    const [editingProperty, setEditingProperty] = useState(null);
     const [isImageModalOpen, setIsImageModalOpen] = useState(false);
     const [selectedPropertyForImages, setSelectedPropertyForImages] = useState(null);
-
+    const navigate = useNavigate();
 
     const loadProperties = async () => {
         setLoading(true);
@@ -200,22 +111,6 @@ function PropertyManagement() {
         loadProperties();
     }, []);
 
-    const handleSave = async (propertyData) => {
-        try {
-            if (editingProperty) {
-                await updateProperty(editingProperty.id, propertyData);
-            } else {
-                await createProperty(propertyData);
-            }
-            loadProperties(); // Refresh list
-            setIsFormOpen(false);
-            setEditingProperty(null);
-        } catch (err) {
-            setError('保存に失敗しました。');
-            console.error(err);
-        }
-    };
-
     const handleDelete = async (id) => {
         if (window.confirm('この施設を本当に削除しますか？')) {
             try {
@@ -227,16 +122,6 @@ function PropertyManagement() {
             }
         }
     };
-
-    const handleEdit = (property) => {
-        setEditingProperty(property);
-        setIsFormOpen(true);
-    };
-
-    const handleCreate = () => {
-        setEditingProperty(null);
-        setIsFormOpen(true);
-    };
     
     const handleManageImages = (property) => {
         setSelectedPropertyForImages(property);
@@ -246,7 +131,7 @@ function PropertyManagement() {
     return (
         <div className="property-management">
             <h1>施設管理</h1>
-            <button className="btn-primary" onClick={handleCreate}>新しい施設を登録</button>
+            <button className="btn-primary" onClick={() => navigate('/property/new')}>新しい施設を登録</button>
             
             {loading && <p>読み込み中...</p>}
             {error && <p className="error">{error}</p>}
@@ -271,7 +156,7 @@ function PropertyManagement() {
                                     <td>{prop.capacity}</td>
                                     <td>{prop.management_type}</td>
                                     <td>
-                                        <button onClick={() => handleEdit(prop)}>編集</button>
+                                        <button onClick={() => navigate(`/property/${prop.id}/edit`)}>編集</button>
                                         <button onClick={() => handleManageImages(prop)}>画像管理</button>
                                         <button className="btn-danger" onClick={() => handleDelete(prop.id)}>削除</button>
                                     </td>
@@ -280,14 +165,6 @@ function PropertyManagement() {
                         </tbody>
                     </table>
                 </div>
-            )}
-
-            {isFormOpen && (
-                <PropertyForm 
-                    property={editingProperty}
-                    onSave={handleSave}
-                    onCancel={() => { setIsFormOpen(false); setEditingProperty(null); }}
-                />
             )}
             
             {isImageModalOpen && (

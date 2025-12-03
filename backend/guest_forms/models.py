@@ -69,7 +69,13 @@ class Property(models.Model):
     check_out_time = models.TimeField(null=True, blank=True, verbose_name="チェックアウト時刻")
     description = models.TextField(blank=True, verbose_name="施設説明")
     management_type = models.CharField(max_length=50, null=True, blank=True, verbose_name="管理形態")
-    amenities = models.ManyToManyField(Amenity, related_name='properties', blank=True, verbose_name="アメニティ") # ManyToManyFieldを追加
+    amenities = models.ManyToManyField(Amenity, related_name='properties', blank=True, verbose_name="アメニティ")
+
+    # Check-in information for guests
+    wifi_info = models.TextField(blank=True, verbose_name="Wi-Fi情報")
+    house_rules = models.TextField(blank=True, verbose_name="ハウスルール")
+    faq = models.JSONField(null=True, blank=True, default=list, verbose_name="FAQ")
+
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="作成日時")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="更新日時")
 

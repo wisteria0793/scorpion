@@ -5,6 +5,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import CheckInPage from './pages/CheckInPage';
 import GuestFormPage from './pages/GuestFormPage';
 import AnalyticsPage from './pages/AnalyticsPage';
+import PropertyFormPage from './pages/PropertyFormPage';
 import RequireAuth from './components/RequireAuth';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
@@ -34,6 +35,22 @@ const router = createBrowserRouter([
   {
     path: '/guest-form/:token',
     element: <GuestFormPage />,
+  },
+  {
+    path: '/property/new',
+    element: (
+      <RequireAuth>
+        <PropertyFormPage />
+      </RequireAuth>
+    ),
+  },
+  {
+    path: '/property/:id/edit',
+    element: (
+      <RequireAuth>
+        <PropertyFormPage />
+      </RequireAuth>
+    ),
   },
 ]);
 
