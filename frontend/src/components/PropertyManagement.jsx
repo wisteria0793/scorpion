@@ -2,12 +2,29 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getProperties, deleteProperty, getImages, uploadImage, deleteImage } from '../services/propertyApi';
-import './PropertyManagement.css';
+import { 
+    Box, Button, Typography, Table, TableBody, TableCell, TableContainer, 
+    TableHead, TableRow, Paper, Modal, Card, CardContent, CardActions, IconButton, Grid, CircularProgress 
+} from '@mui/material';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+import PhotoLibraryIcon from '@mui/icons-material/PhotoLibrary';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+
+const modalStyle = {
+  position: 'absolute',
+  top: '50%',
+  left: '50%',
+  transform: 'translate(-50%, -50%)',
+  width: { xs: '90%', sm: 600, md: 800 },
+  bgcolor: 'background.paper',
+  boxShadow: 24,
+  p: 4,
+};
 
 const ImageManagementModal = ({ property, onClose }) => {
     const [images, setImages] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
     const [uploading, setUploading] = useState(false);
 
     const fetchImages = async () => {
@@ -15,30 +32,22 @@ const ImageManagementModal = ({ property, onClose }) => {
         try {
             const response = await getImages(property.id);
             setImages(response.data);
-        } catch (err) {
-            setError('画像の取得に失敗しました。');
         } finally {
             setLoading(false);
         }
     };
 
     useEffect(() => {
-        if (property) {
-            fetchImages();
-        }
+        if (property) fetchImages();
     }, [property]);
 
     const handleFileChange = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
-
         setUploading(true);
-        setError(null);
         try {
             await uploadImage(property.id, file);
-            await fetchImages(); // Refresh list
-        } catch (err) {
-            setError('アップロードに失敗しました。');
+            await fetchImages();
         } finally {
             setUploading(false);
         }
@@ -48,78 +57,69 @@ const ImageManagementModal = ({ property, onClose }) => {
         if (window.confirm('この画像を本当に削除しますか？')) {
             try {
                 await deleteImage(property.id, imageId);
-                await fetchImages(); // Refresh list
+                await fetchImages();
             } catch (err) {
-                setError('削除に失敗しました。');
+                console.error(err);
             }
         }
     };
 
     return (
-        <div className="modal">
-            <div className="modal-content">
-                <div className="modal-header">
-                    <h2>{property.name} - 画像管理</h2>
-                    <span className="close-button" onClick={onClose}>&times;</span>
-                </div>
-                {error && <p className="error">{error}</p>}
-                
-                <div className="form-group">
-                    <label>新しい画像をアップロード</label>
-                    <input type="file" onChange={handleFileChange} disabled={uploading} />
-                    {uploading && <p>アップロード中...</p>}
-                </div>
-
-                <div className="image-gallery">
-                    {loading ? <p>画像読み込み中...</p> : 
+        <Modal open onClose={onClose}>
+            <Box sx={modalStyle}>
+                <Typography variant="h6" component="h2" gutterBottom>
+                    {property.name} - 画像管理
+                </Typography>
+                <Button
+                    variant="contained"
+                    component="label"
+                    startIcon={<CloudUploadIcon />}
+                    disabled={uploading}
+                >
+                    {uploading ? 'アップロード中...' : '新しい画像をアップロード'}
+                    <input type="file" hidden onChange={handleFileChange} />
+                </Button>
+                <Grid container spacing={2} sx={{ mt: 2 }}>
+                    {loading ? <CircularProgress /> : 
                         images.map(img => (
-                            <div key={img.id} className="image-thumbnail">
-                                <img src={img.image} alt={`Facility image ${img.id}`} />
-                                <button className="btn-danger" onClick={() => handleDeleteImage(img.id)}>削除</button>
-                            </div>
+                            <Grid item xs={6} sm={4} key={img.id}>
+                                <Card>
+                                    <CardContent sx={{ p: 1 }}>
+                                        <img src={img.image} alt="" style={{ width: '100%', height: 'auto', display: 'block' }} />
+                                    </CardContent>
+                                    <CardActions>
+                                        <IconButton size="small" color="error" onClick={() => handleDeleteImage(img.id)}>
+                                            <DeleteIcon />
+                                        </IconButton>
+                                    </CardActions>
+                                </Card>
+                            </Grid>
                         ))
                     }
-                     {images.length === 0 && !loading && <p>画像がありません。</p>}
-                </div>
-            </div>
-        </div>
+                </Grid>
+            </Box>
+        </Modal>
     );
 };
 
 function PropertyManagement() {
     const [properties, setProperties] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
     const [isImageModalOpen, setIsImageModalOpen] = useState(false);
     const [selectedPropertyForImages, setSelectedPropertyForImages] = useState(null);
     const navigate = useNavigate();
 
-    const loadProperties = async () => {
-        setLoading(true);
-        try {
-            const response = await getProperties();
-            setProperties(response.data);
-        } catch (err) {
-            setError('施設情報の取得に失敗しました。');
-            console.error(err);
-        } finally {
-            setLoading(false);
-        }
-    };
-
     useEffect(() => {
-        loadProperties();
+        getProperties().then(res => {
+            setProperties(res.data);
+            setLoading(false);
+        });
     }, []);
 
     const handleDelete = async (id) => {
         if (window.confirm('この施設を本当に削除しますか？')) {
-            try {
-                await deleteProperty(id);
-                loadProperties(); // Refresh list
-            } catch (err) {
-                setError('削除に失敗しました。');
-                console.error(err);
-            }
+            await deleteProperty(id);
+            setProperties(properties.filter(p => p.id !== id));
         }
     };
     
@@ -128,44 +128,43 @@ function PropertyManagement() {
         setIsImageModalOpen(true);
     };
 
-    return (
-        <div className="property-management">
-            <h1>施設管理</h1>
-            <button className="btn-primary" onClick={() => navigate('/property/new')}>新しい施設を登録</button>
-            
-            {loading && <p>読み込み中...</p>}
-            {error && <p className="error">{error}</p>}
+    if (loading) return <CircularProgress />;
 
-            {!loading && !error && (
-                <div className="table-container">
-                    <table className="property-table">
-                        <thead>
-                            <tr>
-                                <th>施設名</th>
-                                <th>住所</th>
-                                <th>最大収容人数</th>
-                                <th>管理形態</th>
-                                <th>操作</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {properties.map(prop => (
-                                <tr key={prop.id}>
-                                    <td>{prop.name}</td>
-                                    <td>{prop.address}</td>
-                                    <td>{prop.capacity}</td>
-                                    <td>{prop.management_type}</td>
-                                    <td>
-                                        <button onClick={() => navigate(`/property/${prop.id}/edit`)}>編集</button>
-                                        <button onClick={() => handleManageImages(prop)}>画像管理</button>
-                                        <button className="btn-danger" onClick={() => handleDelete(prop.id)}>削除</button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            )}
+    return (
+        <Box>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h4" component="h1">施設管理</Typography>
+                <Button variant="contained" onClick={() => navigate('/property/new')}>新しい施設を登録</Button>
+            </Box>
+            
+            <TableContainer component={Paper}>
+                <Table>
+                    <TableHead>
+                        <TableRow>
+                            <TableCell>施設名</TableCell>
+                            <TableCell>住所</TableCell>
+                            <TableCell>最大収容人数</TableCell>
+                            <TableCell>管理形態</TableCell>
+                            <TableCell align="right">操作</TableCell>
+                        </TableRow>
+                    </TableHead>
+                    <TableBody>
+                        {properties.map(prop => (
+                            <TableRow key={prop.id} hover>
+                                <TableCell>{prop.name}</TableCell>
+                                <TableCell>{prop.address}</TableCell>
+                                <TableCell>{prop.capacity}</TableCell>
+                                <TableCell>{prop.management_type}</TableCell>
+                                <TableCell align="right">
+                                    <IconButton size="small" onClick={() => navigate(`/property/${prop.id}/edit`)}><EditIcon /></IconButton>
+                                    <IconButton size="small" onClick={() => handleManageImages(prop)}><PhotoLibraryIcon /></IconButton>
+                                    <IconButton size="small" color="error" onClick={() => handleDelete(prop.id)}><DeleteIcon /></IconButton>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </TableContainer>
             
             {isImageModalOpen && (
                 <ImageManagementModal
@@ -173,7 +172,7 @@ function PropertyManagement() {
                     onClose={() => setIsImageModalOpen(false)}
                 />
             )}
-        </div>
+        </Box>
     );
 }
 

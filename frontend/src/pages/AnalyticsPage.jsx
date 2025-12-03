@@ -1,63 +1,51 @@
 // src/pages/AnalyticsPage.jsx
-import React, { useState, useEffect } from 'react';
-import AuthHeader from '../components/AuthHeader';
+import React, { useState } from 'react';
+import { Box, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Toolbar } from '@mui/material';
+import DashboardIcon from '@mui/icons-material/Dashboard';
+import ListAltIcon from '@mui/icons-material/ListAlt';
+import BusinessIcon from '@mui/icons-material/Business';
+
+import Header from '../components/Header';
 import RevenueAnalysis from '../components/RevenueAnalysis'; 
 import ReservationList from '../components/ReservationList';
 import PropertyManagement from '../components/PropertyManagement';
-import './AnalyticsPage.css';
 
-const SideMenu = ({ currentView, setView, isOpen, setIsOpen }) => {
-  const handleSelect = (view) => {
-    setView(view);
-    setIsOpen(false); // Close menu on selection
-  };
+const drawerWidth = 240;
+
+const SideMenu = ({ currentView, setView }) => {
+  const menuItems = [
+    { text: '売上分析', view: 'revenue', icon: <DashboardIcon /> },
+    { text: '月別予約一覧', view: 'reservations', icon: <ListAltIcon /> },
+    { text: '施設管理', view: 'properties', icon: <BusinessIcon /> },
+  ];
 
   return (
-    <div className={`side-menu ${isOpen ? 'mobile-open' : ''}`}>
-      <h3>メニュー</h3>
-      <ul>
-        <li>
-          <button 
-            className={currentView === 'revenue' ? 'active' : ''}
-            onClick={() => handleSelect('revenue')}
-          >
-            売上分析
-          </button>
-        </li>
-        <li>
-          <button 
-            className={currentView === 'reservations' ? 'active' : ''}
-            onClick={() => handleSelect('reservations')}
-          >
-            月別予約一覧
-          </button>
-        </li>
-        <li>
-          <button
-            className={currentView === 'properties' ? 'active' : ''}
-            onClick={() => handleSelect('properties')}
-          >
-            施設管理
-          </button>
-        </li>
-      </ul>
+    <div>
+      <Toolbar />
+      <List>
+        {menuItems.map((item) => (
+          <ListItem key={item.text} disablePadding>
+            <ListItemButton
+              selected={currentView === item.view}
+              onClick={() => setView(item.view)}
+            >
+              <ListItemIcon>{item.icon}</ListItemIcon>
+              <ListItemText primary={item.text} />
+            </ListItemButton>
+          </ListItem>
+        ))}
+      </List>
     </div>
   );
-}
+};
 
 function AnalyticsPage() {
   const [view, setView] = useState('revenue');
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth <= 768);
-    };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
+  const handleDrawerToggle = () => {
+    setMobileOpen(!mobileOpen);
+  };
 
   const renderContent = () => {
     switch (view) {
@@ -73,26 +61,40 @@ function AnalyticsPage() {
   };
 
   return (
-    <div className="app-root">
-      <AuthHeader />
-      <div className="analytics-page">
-        <SideMenu 
-          currentView={view} 
-          setView={setView} 
-          isOpen={isMenuOpen} 
-          setIsOpen={setIsMenuOpen} 
-        />
-        {isMobile && isMenuOpen && <div className="overlay" onClick={() => setIsMenuOpen(false)}></div>}
-        <div className="content-area">
-          {isMobile && (
-            <button className="hamburger-menu" onClick={() => setIsMenuOpen(true)}>
-              &#9776;
-            </button>
-          )}
-          {renderContent()}
-        </div>
-      </div>
-    </div>
+    <Box sx={{ display: 'flex' }}>
+      <Header onMenuClick={handleDrawerToggle} />
+      <Drawer
+        variant="permanent"
+        sx={{
+          display: { xs: 'none', sm: 'block' },
+          '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
+        }}
+        open
+      >
+        <SideMenu currentView={view} setView={setView} />
+      </Drawer>
+      <Drawer
+        variant="temporary"
+        open={mobileOpen}
+        onClose={handleDrawerToggle}
+        ModalProps={{
+          keepMounted: true, // Better open performance on mobile.
+        }}
+        sx={{
+          display: { xs: 'block', sm: 'none' },
+          '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
+        }}
+      >
+        <SideMenu currentView={view} setView={(v) => { setView(v); setMobileOpen(false); }} />
+      </Drawer>
+      <Box
+        component="main"
+        sx={{ flexGrow: 1, p: 3, width: { sm: `calc(100% - ${drawerWidth}px)` } }}
+      >
+        <Toolbar />
+        {renderContent()}
+      </Box>
+    </Box>
   );
 }
 
