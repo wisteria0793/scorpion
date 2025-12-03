@@ -1,6 +1,6 @@
 // src/pages/AnalyticsPage.jsx
 import React, { useState } from 'react';
-import { Box, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Toolbar } from '@mui/material';
+import { Box, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Toolbar, useTheme, useMediaQuery } from '@mui/material';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import ListAltIcon from '@mui/icons-material/ListAlt';
 import BusinessIcon from '@mui/icons-material/Business';
@@ -42,21 +42,21 @@ const SideMenu = ({ currentView, setView }) => {
 function AnalyticsPage() {
   const [view, setView] = useState('revenue');
   const [mobileOpen, setMobileOpen] = useState(false);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
   };
 
+  const drawerContent = <SideMenu currentView={view} setView={isMobile ? (v) => { setView(v); setMobileOpen(false); } : setView} />;
+
   const renderContent = () => {
     switch (view) {
-      case 'revenue':
-        return <RevenueAnalysis />; 
-      case 'reservations':
-        return <ReservationList />;
-      case 'properties':
-        return <PropertyManagement />;
-      default:
-        return <div>コンテンツを選択してください</div>;
+      case 'revenue': return <RevenueAnalysis />; 
+      case 'reservations': return <ReservationList />;
+      case 'properties': return <PropertyManagement />;
+      default: return <div>コンテンツを選択してください</div>;
     }
   };
 
@@ -64,29 +64,19 @@ function AnalyticsPage() {
     <Box sx={{ display: 'flex' }}>
       <Header onMenuClick={handleDrawerToggle} />
       <Drawer
-        variant="permanent"
-        sx={{
-          display: { xs: 'none', sm: 'block' },
-          '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
-        }}
-        open
-      >
-        <SideMenu currentView={view} setView={setView} />
-      </Drawer>
-      <Drawer
-        variant="temporary"
-        open={mobileOpen}
+        variant={isMobile ? "temporary" : "permanent"}
+        open={isMobile ? mobileOpen : true}
         onClose={handleDrawerToggle}
+        sx={{
+          width: drawerWidth,
+          flexShrink: 0,
+          [`& .MuiDrawer-paper`]: { width: drawerWidth, boxSizing: 'border-box' },
+        }}
         ModalProps={{
           keepMounted: true, // Better open performance on mobile.
         }}
-        sx={{
-          display: { xs: 'block', sm: 'none' },
-          '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
-          zIndex: (theme) => theme.zIndex.drawer + 2 // Ensure it's above the AppBar
-        }}
       >
-        <SideMenu currentView={view} setView={(v) => { setView(v); setMobileOpen(false); }} />
+        {drawerContent}
       </Drawer>
       <Box
         component="main"
