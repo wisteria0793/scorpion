@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import * as authApi from '../services/authApi';
+import apiClient from '../services/apiClient'; // Import the shared apiClient
 
 const AuthContext = createContext({});
 
@@ -34,9 +35,7 @@ export function AuthProvider({ children }) {
           const match = document.cookie.match('(^|;)\\s*' + 'csrftoken' + '\\s*=\\s*([^;]+)');
           const csrf = match ? match.pop() : '';
           if (csrf) {
-            // set default header for subsequent requests
-            // eslint-disable-next-line global-require
-            const apiClient = require('../services/authApi').default;
+            // set default header for the shared apiClient instance
             apiClient.defaults.headers.common['X-CSRFToken'] = csrf;
           }
         } catch (e) {

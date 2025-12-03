@@ -1,12 +1,4 @@
-import axios from 'axios';
-
-const apiClient = axios.create({
-  baseURL: 'http://localhost:8000/api',
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  withCredentials: true,
-});
+import apiClient from './apiClient';
 
 export const register = ({ username, email, password, password2 }) =>
   apiClient.post('/auth/register/', { username, email, password, password2 });
@@ -49,4 +41,3 @@ export const logout = () => {
   })();
 };
 
-export default apiClient;
