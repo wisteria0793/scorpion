@@ -2,10 +2,9 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
-import App from './App.jsx'; // メインのレイアウトコンポーネント
 import CheckInPage from './pages/CheckInPage';
 import GuestFormPage from './pages/GuestFormPage';
-import AnalyticsPage from './pages/AnalyticsPage'; // 追加
+import AnalyticsPage from './pages/AnalyticsPage';
 import RequireAuth from './components/RequireAuth';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
@@ -22,24 +21,19 @@ const router = createBrowserRouter([
   },
   {
     path: '/',
-    element: <App />,
-    // 他の既存ルート...
-  },
-  {
-    path: '/check-in/:facilitySlug', // 予約検索ページのルート
-    element: <CheckInPage />,
-  },
-  {
-    path: '/guest-forms/:token', // フォームページのルート
-    element: <GuestFormPage />,
-  },
-  {
-    path: '/revenue', // このルートをAnalyticsPageに向ける
     element: (
       <RequireAuth>
         <AnalyticsPage />
       </RequireAuth>
     ),
+  },
+  {
+    path: '/check-in/:facilitySlug',
+    element: <CheckInPage />,
+  },
+  {
+    path: '/guest-form/:token',
+    element: <GuestFormPage />,
   },
 ]);
 
