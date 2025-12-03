@@ -29,6 +29,38 @@ export const fetchRevenueData = async (params) => {
 };
 
 /**
+ * 前年同月比の売上データをバックエンドから取得する
+ * @param {object} params - クエリパラメータ (year, property_name)
+ * @returns {Promise<Array>}
+ */
+export const fetchYoYRevenueData = async (params) => {
+  try {
+    const response = await apiClient.get('/revenue/yoy/', { params });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching YoY revenue data:', error);
+    throw error;
+  }
+};
+
+/**
+ * 国籍別比率データをバックエンドから取得する
+ * @param {object} params - クエリパラメータ (year, property_name)
+ * @returns {Promise<Array>}
+ */
+export const fetchNationalityData = async (params) => {
+  try {
+    const response = await apiClient.get('/analytics/nationality/', { params });
+    return response.data;
+  } catch (error)
+{
+    console.error('Error fetching nationality data:', error);
+    throw error;
+  }
+};
+
+
+/**
  * 施設のリストをバックエンドから取得する
  * （補足: このAPIはまだ実装していませんが、施設ごとのフィルタリングに必要になります）
  * @returns {Promise<Array>} - 施設データの配列

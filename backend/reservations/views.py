@@ -8,8 +8,8 @@ from datetime import datetime, date, timedelta
 from collections import defaultdict
 import calendar
 
-from django.db.models import Sum
-from django.db.models.functions import TruncMonth
+from django.db.models import Sum, Count
+from django.db.models.functions import TruncMonth, Extract
 
 from .models import Reservation, SyncStatus
 from guest_forms.models import GuestSubmission, Property, FormTemplate
@@ -225,3 +225,103 @@ class LastSyncTimeView(APIView):
                 {"error": "No sync has been performed yet."},
                 status=status.HTTP_404_NOT_FOUND
             )
+
+class YoYRevenueAPIView(APIView):
+    """
+    前年同月比の売上データを生成するAPIビュー。
+    """
+    def get(self, request, *args, **kwargs):
+        try:
+            today = date.today()
+            default_year = today.year - 1 if today.month < 3 else today.year
+            selected_year = int(request.query_params.get('year', default_year))
+        except (ValueError, TypeError):
+            selected_year = default_year
+
+        property_name = request.query_params.get('property_name')
+
+        # 対象年度と前年度のデータを取得
+        current_year_data = self._get_revenue_data(selected_year, property_name)
+        previous_year_data = self._get_revenue_data(selected_year - 1, property_name)
+
+        # データをマージ
+        response_data = []
+        for i in range(12):
+            month_label = f"{((i + 2) % 12) + 1}月" # 3月から始まるため
+            response_data.append({
+                "month": month_label,
+                "current_year": current_year_data[i].get("total", 0),
+                "previous_year": previous_year_data[i].get("total", 0),
+            })
+        
+        return Response(response_data)
+
+    def _get_revenue_data(self, year, property_name):
+        start_date = date(year, 3, 1)
+        end_date = (date(year + 1, 3, 1) - timedelta(days=1))
+
+        queryset = Reservation.objects.filter(
+            check_in_date__range=(start_date, end_date),
+            status__in=['Confirmed', 'New']
+        )
+        if property_name:
+            queryset = queryset.filter(property__name=property_name)
+        
+        monthly_totals = queryset.annotate(
+            month=Extract('check_in_date', 'month')
+        ).values('month').annotate(
+            total=Sum('total_price')
+        ).order_by('month')
+
+        revenue_by_month = {item['month']: item['total'] or 0 for item in monthly_totals}
+
+        result_list = []
+        # Fiscal year months: Mar, Apr, ..., Dec, Jan, Feb
+        fiscal_month_order = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2]
+        
+        for month in fiscal_month_order:
+            result_list.append({"total": revenue_by_month.get(month, 0)})
+
+        return result_list
+
+
+class NationalityRatioAPIView(APIView):
+    """
+    国籍別比率データを生成するAPIビュー。
+    """
+    def get(self, request, *args, **kwargs):
+        try:
+            today = date.today()
+            default_year = today.year - 1 if today.month < 3 else today.year
+            selected_year = int(request.query_params.get('year', default_year))
+        except (ValueError, TypeError):
+            selected_year = default_year
+
+        property_name = request.query_params.get('property_name')
+        
+        start_date = date(selected_year, 3, 1)
+        end_date = (date(selected_year + 1, 3, 1) - timedelta(days=1))
+
+        submissions = GuestSubmission.objects.filter(
+            reservation__check_in_date__range=(start_date, end_date),
+            status=GuestSubmission.SubmissionStatus.COMPLETED
+        ).select_related('reservation__property')
+
+        if property_name:
+            submissions = submissions.filter(reservation__property__name=property_name)
+
+        nationality_counts = defaultdict(int)
+        for submission in submissions:
+            if submission.submitted_data:
+                # 'nationality' or 'country' key, case-insensitive
+                nationality = submission.submitted_data.get('nationality') or submission.submitted_data.get('country')
+                if nationality:
+                    nationality_counts[nationality] += 1
+                else:
+                    nationality_counts['不明'] += 1
+            else:
+                nationality_counts['不明'] += 1
+
+        response_data = [{"country": country, "count": count} for country, count in nationality_counts.items()]
+        
+        return Response(response_data)
