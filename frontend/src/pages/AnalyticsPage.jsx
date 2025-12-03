@@ -83,7 +83,9 @@ function AnalyticsPage() {
         sx={{ flexGrow: 1, p: 3, width: { sm: `calc(100% - ${drawerWidth}px)` } }}
       >
         <Toolbar />
-        {renderContent()}
+        <div className="app-container">
+          {renderContent()}
+        </div>
       </Box>
     </Box>
   );

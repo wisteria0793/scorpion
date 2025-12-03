@@ -1,71 +1,83 @@
 :root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+  /* design tokens */
+  --font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --bg: #f6f8fa;
+  --surface: #ffffff;
+  --text: #0f1720;
+  --muted: #6b7280;
+  --primary: #2563eb; /* blue-600 */
+  --primary-600: #1d4ed8;
+  --radius: 10px;
+  --container-max: 1200px;
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  color-scheme: light;
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
-
+/* Reset and base */
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; }
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
   font-family: var(--font-family);
-  background-color: var(--background-color);
-  color: var(--text-color);
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.45;
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+/* Page container to center content on wide screens */
+.app-container {
+  max-width: var(--container-max);
+  margin: 88px auto 48px; /* leave space for fixed header */
+  padding: 24px;
 }
 
+/* Link */
+a { color: var(--primary); text-decoration: none; font-weight: 500; }
+a:hover { color: var(--primary-600); text-decoration: underline; }
+
+/* Headings */
+h1, h2, h3 { color: var(--text); margin: 0 0 8px 0; }
+h1 { font-size: 2rem; }
+
+/* Buttons */
 button {
-  border-radius: 8px;
+  border-radius: var(--radius);
   border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
+  padding: 10px 16px;
+  font-size: 0.95rem;
+  font-weight: 600;
   font-family: inherit;
-  background-color: #1a1a1a;
+  background: var(--surface);
+  color: var(--text);
   cursor: pointer;
-  transition: border-color 0.25s;
+  transition: box-shadow .15s ease, transform .05s ease, border-color .15s ease;
 }
-button:hover {
-  border-color: #646cff;
+button:hover { box-shadow: 0 4px 14px rgba(37,99,235,0.12); transform: translateY(-1px); }
+button.primary { background: var(--primary); color: white; border-color: var(--primary); }
+button.ghost { background: transparent; border-color: rgba(15,23,32,0.06); }
+
+/* Form field default styling for native inputs used by FormField.jsx */
+.form-field-wrapper { margin-bottom: 14px; }
+.form-field-wrapper label { display:block; font-size:0.95rem; color:var(--text); margin-bottom:6px; }
+.form-field-text, .form-field-email, .form-field-number, .form-field-date, .form-field-file, .form-field-textarea {
+  width:100%;
+  padding:10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(15,23,32,0.08);
+  background: var(--surface);
+  font-size: 0.95rem;
 }
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+.form-field-textarea { min-height:100px; resize: vertical; }
+.form-field-radio-label { display:inline-flex; gap:8px; align-items:center; margin-right:12px; }
+
+/* Paper-like card */
+.card { background: var(--surface); border-radius: 12px; padding: 20px; box-shadow: 0 6px 18px rgba(2,6,23,0.06); }
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .app-container { margin: 64px 12px 24px; padding: 12px; }
+  h1 { font-size: 1.6rem; }
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
-}

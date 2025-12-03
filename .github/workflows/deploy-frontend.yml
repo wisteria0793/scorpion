@@ -1,0 +1,47 @@
+name: Deploy frontend to GitHub Pages
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build-and-upload:
+    runs-on: ubuntu-latest
+    name: Build frontend and upload Pages artifact
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build (vite)
+        working-directory: frontend
+        env:
+          CI: true
+        run: npm run build
+
+      - name: Upload build to Pages
+        uses: actions/upload-pages-artifact@v1
+        with:
+          path: frontend/dist
+
+  deploy:
+    needs: build-and-upload
+    runs-on: ubuntu-latest
+    name: Deploy to GitHub Pages
+    steps:
+      - name: Deploy
+        uses: actions/deploy-pages@v1

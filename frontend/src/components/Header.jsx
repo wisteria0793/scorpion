@@ -19,7 +19,7 @@ function Header({ onMenuClick }) {
     };
 
     return (
-        <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
+        <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1, backgroundColor: (theme) => theme.palette.background.paper, color: (theme) => theme.palette.text.primary }}>
             <Toolbar>
                 <IconButton
                     color="inherit"

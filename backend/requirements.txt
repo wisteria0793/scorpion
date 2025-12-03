@@ -1,0 +1,9 @@
+# Backend Python dependencies (minimal set). Adjust versions as needed.
+Django==5.2.8
+djangorestframework
+django-cors-headers
+python-dotenv
+requests
+gunicorn
+psycopg2-binary
+Pillow

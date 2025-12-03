@@ -158,5 +158,31 @@ macOSでの環境構築手順です。
     python manage.py runserver
     ```
     起動後、ブラウザで `http://localhost:8000` にアクセスすると、Djangoのデフォルトページが表示されます。 
+    
+## デプロイ（フロントエンド自動デプロイ）
+
+以下は本リポジトリに追加した GitHub Actions を使ったフロントエンド自動デプロイの手順と注意点です。
+
+- 概要: `main` ブランチへ push すると、`/frontend` をビルドして GitHub Pages にデプロイするワークフローが動作します。ワークフローは `.github/workflows/deploy-frontend.yml` に追加済みです。
+
+- 手順（簡易）:
+  1. `frontend` の依存をインストールしてローカルでビルド確認:
+```bash
+cd frontend
+npm install
+npm run build
+```
+  2. 変更をコミットして `main` に push すると、GitHub Actions がビルドとデプロイを自動で行います。
+  3. GitHub リポジトリの `Settings > Pages`（または `Pages` タブ）で公開 URL を確認してください。
+
+- 重要な注意点（Vite の base 設定）:
+  - GitHub Pages の「プロジェクトページ」（`https://<owner>.github.io/<repo>/`）にデプロイする場合、ビルド時にアセット参照が正しくならないことがあります。そのため `vite.config.js` に `base: '/<repo>/'` を設定することを推奨します（例: `base: '/scorpion/'`）。
+  - 代替として React Router を `HashRouter` に切り替える方法や、Netlify/Vercel にデプロイする方法もあります（後者はリポジトリ連携のみで簡単にデプロイ可能）。
+
+- トラブルシューティング:
+  - Actions の実行ログを `Actions` タブで確認してください。
+  - ローカルで `npm run build` を実行して `frontend/dist` が生成されるか確認してください。
+
+必要であれば、この README に `vite.config.js` の自動上書き（`base` の追加）や、Netlify/Vercel 用の手順も追記します。どちらを優先しますか？
 
 

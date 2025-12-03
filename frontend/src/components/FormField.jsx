@@ -8,14 +8,14 @@ export default function FormField({ field, value, onChange }) {
   switch (field_type) {
     case 'textarea':
       return (
-        <div>
+        <div className="form-field-wrapper">
           <label>{label}{is_required && '*'}</label>
           <textarea name={name} value={value} onChange={onChange} required={is_required} className="form-field-textarea" />
         </div>
       );
     case 'radio':
       return (
-        <div>
+        <div className="form-field-wrapper">
           <label>{label}{is_required && '*'}</label>
           {options && options.map(opt => (
             <label key={opt} className="form-field-radio-label">
@@ -27,28 +27,28 @@ export default function FormField({ field, value, onChange }) {
       );
     case 'file':
       return (
-        <div>
+        <div className="form-field-wrapper">
           <label>{label}{is_required && '*'}</label>
           <input type="file" name={name} onChange={onChange} required={is_required} className="form-field-file" />
         </div>
       );
     case 'date':
       return (
-        <div>
+        <div className="form-field-wrapper">
           <label>{label}{is_required && '*'}</label>
           <input type="date" name={name} value={value} onChange={onChange} required={is_required} className="form-field-date" />
         </div>
       );
     case 'number':
       return (
-        <div>
+        <div className="form-field-wrapper">
           <label>{label}{is_required && '*'}</label>
           <input type="number" name={name} value={value} onChange={onChange} required={is_required} className="form-field-number" />
         </div>
       );
     case 'email':
       return (
-        <div>
+        <div className="form-field-wrapper">
           <label>{label}{is_required && '*'}</label>
           <input type="email" name={name} value={value} onChange={onChange} required={is_required} className="form-field-email" />
         </div>
@@ -56,7 +56,7 @@ export default function FormField({ field, value, onChange }) {
     case 'text':
     default:
       return (
-        <div>
+        <div className="form-field-wrapper">
           <label>{label}{is_required && '*'}</label>
           <input type="text" name={name} value={value} onChange={onChange} required={is_required} className="form-field-text" />
         </div>

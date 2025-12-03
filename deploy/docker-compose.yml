@@ -1,0 +1,51 @@
+version: '3.8'
+
+# Template docker-compose for deploying scorpion backend + postgres
+# Copy this file to your server (e.g. /srv/scorpion/docker-compose.yml) and
+# update the placeholders (<OWNER>, secrets) before running `docker compose up -d`.
+
+services:
+  web:
+    image: ghcr.io/<OWNER>/scorpion-backend:latest
+    restart: always
+    env_file:
+      - ../backend/.env   # prefer storing env in backend/.env on server
+    environment:
+      - DJANGO_SETTINGS_MODULE=api.settings
+      # If you prefer DATABASE_URL (example): DATABASE_URL=postgres://user:pass@db:5432/scorpion
+    ports:
+      - '8000:8000'
+    depends_on:
+      - db
+    volumes:
+      - media-data:/app/media
+
+  db:
+    image: postgres:15
+    restart: always
+    environment:
+      - POSTGRES_DB=scorpion
+      - POSTGRES_USER=scorpion
+      - POSTGRES_PASSWORD=changeme
+    volumes:
+      - db-data:/var/lib/postgresql/data
+
+  # Optional: a simple file server / nginx to serve static files or reverse proxy
+  # nginx:
+  #   image: nginx:stable
+  #   ports:
+  #     - '80:80'
+  #   volumes:
+  #     - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+  #     - media-data:/usr/share/nginx/html/media:ro
+  #   depends_on:
+  #     - web
+
+volumes:
+  db-data:
+  media-data:
+
+# Notes:
+# - On the server, create `backend/.env` from `.env.example` and set production values (SECRET_KEY, DEBUG=False, any API keys).
+# - Ensure the server can pull images from GHCR: either make images public or configure `docker login ghcr.io` with a PAT.
+# - The web service uses the GHCR image; alternatively you can build locally and push, or change to a build context.
