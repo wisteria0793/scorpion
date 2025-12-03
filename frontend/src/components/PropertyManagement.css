@@ -1,49 +1,79 @@
 /* src/components/PropertyManagement.css */
-.property-management {
-    font-family: sans-serif;
+.property-management button,
+.reservation-list-container button {
+    padding: var(--spacing-sm) var(--spacing-md);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+    cursor: pointer;
+    margin-right: var(--spacing-sm);
+    background-color: var(--surface-color);
+    color: var(--text-color);
+    font-size: var(--font-size-sm);
+    transition: background-color 0.2s, box-shadow 0.2s;
 }
 
-.property-management button {
-    padding: 8px 12px;
-    border-radius: 4px;
-    border: 1px solid #ccc;
-    cursor: pointer;
-    margin-right: 10px;
+.property-management button:hover,
+.reservation-list-container button:hover {
+    background-color: var(--background-color);
+    border-color: #a7a7a7;
 }
 
 .property-management .btn-primary {
-    background-color: #0d6efd;
+    background-color: var(--primary-color);
     color: white;
-    border-color: #0d6efd;
+    border-color: var(--primary-color);
+    font-weight: 600;
+}
+.property-management .btn-primary:hover {
+    background-color: var(--primary-color-dark);
+    border-color: var(--primary-color-dark);
 }
 
 .property-management .btn-danger {
-    background-color: #dc3545;
+    background-color: var(--danger-color);
     color: white;
-    border-color: #dc3545;
+    border-color: var(--danger-color);
+}
+.property-management .btn-danger:hover {
+    background-color: #b02a37;
+    border-color: #b02a37;
 }
 
 .table-container {
     overflow-x: auto;
     width: 100%;
+    background-color: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow-sm);
 }
 
 .property-table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 20px;
 }
 
 .property-table th,
 .property-table td {
-    border: 1px solid #ddd;
-    padding: 12px;
+    border-bottom: 1px solid var(--border-color);
+    padding: var(--spacing-md);
     text-align: left;
-    vertical-align: top;
+    vertical-align: middle;
 }
 
 .property-table thead {
-    background-color: #f8f9fa;
+    background-color: var(--background-color);
+}
+
+.property-table th {
+    font-weight: 600;
+    color: var(--text-color-light);
+    font-size: var(--font-size-sm);
+    text-transform: uppercase;
+}
+
+.property-table tbody tr:hover {
+    background-color: var(--background-color);
 }
 
 /* Modal styles */
@@ -55,20 +85,21 @@
     width: 100%;
     height: 100%;
     overflow: auto;
-    background-color: rgba(0,0,0,0.4);
+    background-color: rgba(0,0,0,0.5);
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
 .modal-content {
-    background-color: #fefefe;
-    padding: 20px;
-    border: 1px solid #888;
-    width: 80%;
+    background-color: var(--surface-color);
+    padding: var(--spacing-lg);
+    border: none;
+    width: 90%;
     max-width: 600px;
-    border-radius: 8px;
-    max-height: 80vh;
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow-md);
+    max-height: 90vh;
     overflow-y: auto;
 }
 
@@ -76,13 +107,14 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 1px solid #ddd;
-    padding-bottom: 10px;
-    margin-bottom: 20px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: var(--spacing-md);
+    margin-bottom: var(--spacing-lg);
 }
 
 .modal-header h2 {
     margin: 0;
+    font-size: 1.5rem;
 }
 
 .close-button {
@@ -93,54 +125,70 @@
 }
 
 .property-form .form-group {
-    margin-bottom: 15px;
+    margin-bottom: var(--spacing-md);
 }
 
 .property-form label {
     display: block;
-    margin-bottom: 5px;
+    margin-bottom: var(--spacing-sm);
+    font-weight: 600;
+    font-size: var(--font-size-sm);
 }
 
 .property-form input,
 .property-form textarea {
     width: 100%;
-    padding: 8px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
+    padding: var(--spacing-sm) var(--spacing-md);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    font-size: var(--font-size-base);
+    transition: border-color 0.2s, box-shadow 0.2s;
 }
+
+.property-form input:focus,
+.property-form textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+}
+
 
 /* Image Gallery Styles */
 .image-gallery {
-    margin-top: 20px;
+    margin-top: var(--spacing-md);
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 15px;
+    gap: var(--spacing-md);
 }
 
 .image-thumbnail {
     position: relative;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    padding: 5px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-xs);
+    background-color: var(--background-color);
 }
 
 .image-thumbnail img {
     width: 100%;
     height: auto;
     display: block;
-    border-radius: 2px;
+    border-radius: calc(var(--border-radius) - 2px);
 }
 
 .image-thumbnail .btn-danger {
     position: absolute;
-    top: 5px;
-    right: 5px;
+    top: var(--spacing-sm);
+    right: var(--spacing-sm);
     padding: 2px 5px;
     font-size: 0.8rem;
+    min-height: 0;
+    line-height: 1;
 }
 
 @media (max-width: 768px) {
     .modal-content {
         width: 95%;
+        padding: var(--spacing-md);
     }
 }
