@@ -83,6 +83,7 @@ function AnalyticsPage() {
         sx={{
           display: { xs: 'block', sm: 'none' },
           '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
+          zIndex: (theme) => theme.zIndex.drawer + 2 // Ensure it's above the AppBar
         }}
       >
         <SideMenu currentView={view} setView={(v) => { setView(v); setMobileOpen(false); }} />
