@@ -14,7 +14,7 @@ from django.db.models.functions import TruncMonth, Extract
 from .models import Reservation, SyncStatus
 from guest_forms.models import GuestSubmission, Property, FormTemplate
 from guest_forms.serializers import FormTemplateSerializer
-from .serializers import SyncStatusSerializer
+from .serializers import SyncStatusSerializer, ReservationSerializer
 
 
 class ReservationLookupView(APIView):
@@ -325,3 +325,31 @@ class NationalityRatioAPIView(APIView):
         response_data = [{"country": country, "count": count} for country, count in nationality_counts.items()]
         
         return Response(response_data)
+
+
+class MonthlyReservationListView(APIView):
+    """
+    指定された年/月の予約リストを返すAPIビュー。
+    """
+    def get(self, request, *args, **kwargs):
+        try:
+            year = int(request.query_params.get('year'))
+            month = int(request.query_params.get('month'))
+        except (ValueError, TypeError, KeyError):
+            return Response(
+                {"error": "year and month query parameters are required."}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        property_name = request.query_params.get('property_name')
+
+        queryset = Reservation.objects.filter(
+            check_in_date__year=year,
+            check_in_date__month=month
+        ).order_by('check_in_date')
+
+        if property_name:
+            queryset = queryset.filter(property__name=property_name)
+
+        serializer = ReservationSerializer(queryset, many=True)
+        return Response(serializer.data)

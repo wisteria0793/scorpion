@@ -1,0 +1,65 @@
+/* src/pages/AnalyticsPage.css */
+.analytics-page {
+  display: flex;
+  height: calc(100vh - 60px); /* Adjust based on header height */
+}
+
+.side-menu {
+  width: 220px;
+  background-color: #f8f9fa;
+  padding: 20px;
+  border-right: 1px solid #dee2e6;
+}
+
+.side-menu h3 {
+  font-size: 1.2rem;
+  margin-bottom: 20px;
+}
+
+.side-menu ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.side-menu li {
+  margin-bottom: 10px;
+}
+
+.side-menu a,
+.side-menu button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 10px 15px;
+  text-decoration: none;
+  color: #333;
+  border-radius: 5px;
+  background: none;
+  border: none;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.side-menu a.active,
+.side-menu button.active {
+  background-color: #0d6efd;
+  color: white;
+  font-weight: bold;
+}
+
+.side-menu a:hover,
+.side-menu button:hover {
+  background-color: #e9ecef;
+}
+
+.side-menu a.active:hover,
+.side-menu button.active:hover {
+  background-color: #0b5ed7;
+}
+
+.content-area {
+  flex-grow: 1;
+  padding: 20px;
+  overflow-y: auto;
+}

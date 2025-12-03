@@ -1,0 +1,59 @@
+/* src/components/ReservationList.css */
+
+.reservation-list-container {
+    font-family: sans-serif;
+}
+
+.reservation-list-container .filters {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 20px;
+    align-items: center;
+}
+
+.reservation-list-container .filter-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.reservation-list-container .filter-group label {
+    font-size: 0.9rem;
+    margin-bottom: 5px;
+    color: #555;
+}
+
+.reservation-list-container .filter-group select {
+    padding: 8px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+}
+
+.reservation-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+.reservation-table th,
+.reservation-table td {
+    border: 1px solid #ddd;
+    padding: 12px;
+    text-align: left;
+}
+
+.reservation-table thead {
+    background-color: #f8f9fa;
+}
+
+.reservation-table th {
+    font-weight: bold;
+    color: #333;
+}
+
+.reservation-table tbody tr:nth-child(even) {
+    background-color: #f2f2f2;
+}
+
+.reservation-table tbody tr:hover {
+    background-color: #e9ecef;
+}

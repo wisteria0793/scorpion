@@ -1,34 +1,15 @@
-// src/pages/RevenuePage.jsx
+// src/components/RevenueAnalysis.jsx
 import React, { useState, useEffect, useMemo } from 'react';
 import { fetchRevenueData, fetchYoYRevenueData, fetchNationalityData, getLastSyncTime } from '../services/revenueApi';
 import {
     ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
     PieChart, Pie, Cell, BarChart
 } from 'recharts';
-import './RevenuePage.css';
+import '../pages/RevenuePage.css'; // Reuse existing styles
 
-// (Existing custom components remain the same)
-const renderLegend = (props) => {
-    const { payload } = props;
-    if (!payload || payload.length === 0) return null;
-    const sortedPayload = [...payload].sort((a, b) => {
-        if (a.dataKey === 'total') return -1;
-        if (b.dataKey === 'total') return 1;
-        if (a.value < b.value) return -1;
-        if (a.value > b.value) return 1;
-        return 0;
-    });
-    return (
-        <ul className="custom-legend">
-            {sortedPayload.map((entry, index) => (
-                <li key={`item-${index}`} className="custom-legend-item">
-                    <span className="legend-icon" style={{ backgroundColor: entry.color }}></span>
-                    {entry.value}
-                </li>
-            ))}
-        </ul>
-    );
-};
+// Tooltip and Legend components can be copied from RevenuePage.jsx
+// NOTE: To keep this brief, I am assuming they are copied here.
+// In a real scenario, they would be extracted to their own files.
 const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
         const desiredOrder = ['総売上', '委託管理', '自社管理', 'current_year', 'previous_year'];
@@ -59,8 +40,31 @@ const CustomTooltip = ({ active, payload, label }) => {
     return null;
 };
 
+const renderLegend = (props) => {
+    const { payload } = props;
+    if (!payload || payload.length === 0) return null;
+    const sortedPayload = [...payload].sort((a, b) => {
+        if (a.dataKey === 'total') return -1;
+        if (b.dataKey === 'total') return 1;
+        if (a.value < b.value) return -1;
+        if (a.value > b.value) return 1;
+        return 0;
+    });
+    return (
+        <ul className="custom-legend">
+            {sortedPayload.map((entry, index) => (
+                <li key={`item-${index}`} className="custom-legend-item">
+                    <span className="legend-icon" style={{ backgroundColor: entry.color }}></span>
+                    {entry.value}
+                </li>
+            ))}
+        </ul>
+    );
+};
 
-function RevenuePage() {
+
+// Main Component
+function RevenueAnalysis() {
     const [view, setView] = useState('monthly'); // 'monthly', 'yoy', 'nationality'
     const [monthlyData, setMonthlyData] = useState([]);
     const [yoyData, setYoyData] = useState([]);
@@ -159,7 +163,7 @@ function RevenuePage() {
     };
 
     return (
-        <div className="revenue-page">
+        <div>
             <div className="page-header">
                 <h1>売上分析レポート {selectedProperty ? `(${selectedProperty})` : '(全施設)'}</h1>
                 <div className="sync-status">
@@ -192,6 +196,7 @@ function RevenuePage() {
         </div>
     );
 }
+
 
 // Chart Components
 const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
@@ -300,4 +305,4 @@ const NationalityChart = ({ data }) => {
     );
 };
 
-export default RevenuePage;
+export default RevenueAnalysis;

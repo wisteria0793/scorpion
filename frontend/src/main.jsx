@@ -5,7 +5,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import App from './App.jsx'; // メインのレイアウトコンポーネント
 import CheckInPage from './pages/CheckInPage';
 import GuestFormPage from './pages/GuestFormPage';
-import RevenuePage from './pages/RevenuePage'; // 追加
+import AnalyticsPage from './pages/AnalyticsPage'; // 追加
 import RequireAuth from './components/RequireAuth';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
@@ -34,10 +34,10 @@ const router = createBrowserRouter([
     element: <GuestFormPage />,
   },
   {
-    path: '/revenue', // 売上レポートページのルートを追加
+    path: '/revenue', // このルートをAnalyticsPageに向ける
     element: (
       <RequireAuth>
-        <RevenuePage />
+        <AnalyticsPage />
       </RequireAuth>
     ),
   },
