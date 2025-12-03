@@ -117,7 +117,7 @@ function PropertyFormPage() {
                         <div className="form-group">
                             <label>FAQ (JSON形式)</label>
                             <textarea name="faq" value={typeof formData.faq === 'string' ? formData.faq : JSON.stringify(formData.faq, null, 2)} onChange={handleFaqChange} rows="8"></textarea>
-                            <small>例: `[{"q": "最寄駅はどこですか？", "a": "JR函館駅です。"}]`</small>
+                            <small>例: [{"q": "最寄駅はどこですか？", "a": "JR函館駅です。"}]</small>
                         </div>
                     </AccordionSection>
                     
