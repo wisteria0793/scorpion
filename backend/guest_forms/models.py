@@ -85,7 +85,7 @@ class FacilityImage(models.Model):
     施設画像情報。
     """
     property = models.ForeignKey(Property, on_delete=models.CASCADE, related_name='images', verbose_name="施設")
-    image_url = models.URLField(max_length=2000, verbose_name="画像URL") # URLFieldに変更
+    image = models.ImageField(upload_to='facility_images/', verbose_name="画像ファイル")
     order = models.PositiveIntegerField(default=0, verbose_name="表示順")
 
     class Meta:

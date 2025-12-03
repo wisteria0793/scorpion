@@ -1,7 +1,13 @@
 # backend/guest_forms/serializers.py
 
 from rest_framework import serializers
-from .models import FormField, FormTemplate, Property
+from .models import FormField, FormTemplate, Property, FacilityImage
+
+class FacilityImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FacilityImage
+        fields = ['id', 'image', 'property', 'order']
+        read_only_fields = ['property']
 
 class PropertySerializer(serializers.ModelSerializer):
     class Meta:

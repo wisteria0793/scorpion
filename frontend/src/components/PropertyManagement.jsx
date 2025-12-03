@@ -1,7 +1,87 @@
 // src/components/PropertyManagement.jsx
 import React, { useState, useEffect } from 'react';
-import { getProperties, createProperty, updateProperty, deleteProperty } from '../services/propertyApi';
+import { getProperties, createProperty, updateProperty, deleteProperty, getImages, uploadImage, deleteImage } from '../services/propertyApi';
 import './PropertyManagement.css';
+
+const ImageManagementModal = ({ property, onClose }) => {
+    const [images, setImages] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [uploading, setUploading] = useState(false);
+
+    const fetchImages = async () => {
+        setLoading(true);
+        try {
+            const response = await getImages(property.id);
+            setImages(response.data);
+        } catch (err) {
+            setError('画像の取得に失敗しました。');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchImages();
+    }, [property.id]);
+
+    const handleFileChange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        setUploading(true);
+        setError(null);
+        try {
+            await uploadImage(property.id, file);
+            await fetchImages(); // Refresh list
+        } catch (err) {
+            setError('アップロードに失敗しました。');
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    const handleDeleteImage = async (imageId) => {
+        if (window.confirm('この画像を本当に削除しますか？')) {
+            try {
+                await deleteImage(property.id, imageId);
+                await fetchImages(); // Refresh list
+            } catch (err) {
+                setError('削除に失敗しました。');
+            }
+        }
+    };
+
+    return (
+        <div className="modal">
+            <div className="modal-content">
+                <div className="modal-header">
+                    <h2>{property.name} - 画像管理</h2>
+                    <span className="close-button" onClick={onClose}>&times;</span>
+                </div>
+                {error && <p className="error">{error}</p>}
+                
+                <div className="form-group">
+                    <label>新しい画像をアップロード</label>
+                    <input type="file" onChange={handleFileChange} disabled={uploading} />
+                    {uploading && <p>アップロード中...</p>}
+                </div>
+
+                <div className="image-gallery">
+                    {loading ? <p>画像読み込み中...</p> : 
+                        images.map(img => (
+                            <div key={img.id} className="image-thumbnail">
+                                <img src={img.image} alt={`Facility image ${img.id}`} />
+                                <button className="btn-danger" onClick={() => handleDeleteImage(img.id)}>削除</button>
+                            </div>
+                        ))
+                    }
+                </div>
+            </div>
+        </div>
+    );
+};
+
 
 const PropertyForm = ({ property, onSave, onCancel }) => {
     const [formData, setFormData] = useState({});
@@ -99,6 +179,9 @@ function PropertyManagement() {
     const [error, setError] = useState(null);
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [editingProperty, setEditingProperty] = useState(null);
+    const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+    const [selectedPropertyForImages, setSelectedPropertyForImages] = useState(null);
+
 
     const loadProperties = async () => {
         setLoading(true);
@@ -154,6 +237,11 @@ function PropertyManagement() {
         setEditingProperty(null);
         setIsFormOpen(true);
     };
+    
+    const handleManageImages = (property) => {
+        setSelectedPropertyForImages(property);
+        setIsImageModalOpen(true);
+    };
 
     return (
         <div className="property-management">
@@ -183,6 +271,7 @@ function PropertyManagement() {
                                 <td>{prop.management_type}</td>
                                 <td>
                                     <button onClick={() => handleEdit(prop)}>編集</button>
+                                    <button onClick={() => handleManageImages(prop)}>画像管理</button>
                                     <button className="btn-danger" onClick={() => handleDelete(prop.id)}>削除</button>
                                 </td>
                             </tr>
@@ -196,6 +285,13 @@ function PropertyManagement() {
                     property={editingProperty}
                     onSave={handleSave}
                     onCancel={() => { setIsFormOpen(false); setEditingProperty(null); }}
+                />
+            )}
+            
+            {isImageModalOpen && (
+                <ImageManagementModal
+                    property={selectedPropertyForImages}
+                    onClose={() => setIsImageModalOpen(false)}
                 />
             )}
         </div>

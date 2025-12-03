@@ -128,6 +128,10 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+# Media files (user-uploaded files)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
 # Beds24 API Credentials
 # IMPORTANT: In a production environment, use environment variables
 # or a secrets management tool instead of hardcoding credentials.
