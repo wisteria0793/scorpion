@@ -62,4 +62,61 @@
   flex-grow: 1;
   padding: 20px;
   overflow-y: auto;
+  position: relative; /* For positioning hamburger menu */
+}
+
+.hamburger-menu {
+  display: none; /* Hidden on desktop */
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  z-index: 1001;
+  background: #333;
+  color: white;
+  border: none;
+  padding: 10px;
+  border-radius: 5px;
+  font-size: 1.5rem;
+}
+
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+}
+
+/* Responsive Styles */
+@media (max-width: 768px) {
+  .hamburger-menu {
+    display: block;
+  }
+
+  .analytics-page {
+    flex-direction: column;
+    height: auto;
+  }
+
+  .side-menu {
+    position: fixed;
+    left: -250px; /* Hidden by default */
+    top: 0;
+    bottom: 0;
+    width: 250px;
+    z-index: 1000;
+    transition: left 0.3s ease-in-out;
+    box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+  }
+
+  .side-menu.mobile-open {
+    left: 0; /* Shown when active */
+  }
+
+  .content-area {
+    width: 100%;
+    padding: 10px;
+  }
 }

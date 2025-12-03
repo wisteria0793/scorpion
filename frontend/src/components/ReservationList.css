@@ -28,6 +28,11 @@
     border: 1px solid #ccc;
 }
 
+.table-container {
+    overflow-x: auto;
+    width: 100%;
+}
+
 .reservation-table {
     width: 100%;
     border-collapse: collapse;

@@ -23,6 +23,11 @@
     border-color: #dc3545;
 }
 
+.table-container {
+    overflow-x: auto;
+    width: 100%;
+}
+
 .property-table {
     width: 100%;
     border-collapse: collapse;
@@ -132,4 +137,10 @@
     right: 5px;
     padding: 2px 5px;
     font-size: 0.8rem;
+}
+
+@media (max-width: 768px) {
+    .modal-content {
+        width: 95%;
+    }
 }

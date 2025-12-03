@@ -252,32 +252,34 @@ function PropertyManagement() {
             {error && <p className="error">{error}</p>}
 
             {!loading && !error && (
-                <table className="property-table">
-                    <thead>
-                        <tr>
-                            <th>施設名</th>
-                            <th>住所</th>
-                            <th>最大収容人数</th>
-                            <th>管理形態</th>
-                            <th>操作</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {properties.map(prop => (
-                            <tr key={prop.id}>
-                                <td>{prop.name}</td>
-                                <td>{prop.address}</td>
-                                <td>{prop.capacity}</td>
-                                <td>{prop.management_type}</td>
-                                <td>
-                                    <button onClick={() => handleEdit(prop)}>編集</button>
-                                    <button onClick={() => handleManageImages(prop)}>画像管理</button>
-                                    <button className="btn-danger" onClick={() => handleDelete(prop.id)}>削除</button>
-                                </td>
+                <div className="table-container">
+                    <table className="property-table">
+                        <thead>
+                            <tr>
+                                <th>施設名</th>
+                                <th>住所</th>
+                                <th>最大収容人数</th>
+                                <th>管理形態</th>
+                                <th>操作</th>
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            {properties.map(prop => (
+                                <tr key={prop.id}>
+                                    <td>{prop.name}</td>
+                                    <td>{prop.address}</td>
+                                    <td>{prop.capacity}</td>
+                                    <td>{prop.management_type}</td>
+                                    <td>
+                                        <button onClick={() => handleEdit(prop)}>編集</button>
+                                        <button onClick={() => handleManageImages(prop)}>画像管理</button>
+                                        <button className="btn-danger" onClick={() => handleDelete(prop.id)}>削除</button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
             )}
 
             {isFormOpen && (

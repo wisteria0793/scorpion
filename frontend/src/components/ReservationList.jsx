@@ -75,41 +75,43 @@ function ReservationList() {
             {loading && <p>読み込み中...</p>}
             {error && <p className="error">{error}</p>}
             {!loading && !error && (
-                <table className="reservation-table">
-                    <thead>
-                        <tr>
-                            <th>チェックイン</th>
-                            <th>予約者名</th>
-                            <th>施設</th>
-                            <th>泊数</th>
-                            <th>人数</th>
-                            <th>合計料金</th>
-                            <th>ステータス</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {reservations.length > 0 ? (
-                            reservations.map(res => (
-                                <tr key={res.id}>
-                                    <td>{res.check_in_date}</td>
-                                    <td>{res.guest_name}</td>
-                                    <td>{res.property_name}</td>
-                                    <td>{
-                                        new Date(res.check_out_date) > new Date(res.check_in_date) ? 
-                                        (new Date(res.check_out_date) - new Date(res.check_in_date)) / (1000 * 60 * 60 * 24) : 1
-                                    }泊</td>
-                                    <td>{res.num_guests}名</td>
-                                    <td>¥{Number(res.total_price).toLocaleString()}</td>
-                                    <td>{res.status}</td>
-                                </tr>
-                            ))
-                        ) : (
+                <div className="table-container">
+                    <table className="reservation-table">
+                        <thead>
                             <tr>
-                                <td colSpan="7" style={{ textAlign: 'center' }}>表示する予約がありません。</td>
+                                <th>チェックイン</th>
+                                <th>予約者名</th>
+                                <th>施設</th>
+                                <th>泊数</th>
+                                <th>人数</th>
+                                <th>合計料金</th>
+                                <th>ステータス</th>
                             </tr>
-                        )}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            {reservations.length > 0 ? (
+                                reservations.map(res => (
+                                    <tr key={res.id}>
+                                        <td>{res.check_in_date}</td>
+                                        <td>{res.guest_name}</td>
+                                        <td>{res.property_name}</td>
+                                        <td>{
+                                            new Date(res.check_out_date) > new Date(res.check_in_date) ? 
+                                            (new Date(res.check_out_date) - new Date(res.check_in_date)) / (1000 * 60 * 60 * 24) : 1
+                                        }泊</td>
+                                        <td>{res.num_guests}名</td>
+                                        <td>¥{Number(res.total_price).toLocaleString()}</td>
+                                        <td>{res.status}</td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan="7" style={{ textAlign: 'center' }}>表示する予約がありません。</td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
             )}
         </div>
     );
