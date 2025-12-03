@@ -5,7 +5,7 @@ import {
     ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
     PieChart, Pie, Cell, BarChart
 } from 'recharts';
-import '../pages/RevenuePage.css'; // Reuse existing styles
+import '../pages/AnalyticsPage.css'; // Reuse existing styles
 
 // Tooltip and Legend components can be copied from RevenuePage.jsx
 // NOTE: To keep this brief, I am assuming they are copied here.
