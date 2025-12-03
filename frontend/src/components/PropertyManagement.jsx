@@ -12,12 +12,19 @@ const PropertyForm = ({ property, onSave, onCancel }) => {
             slug: '',
             beds24_property_key: '',
             management_type: '',
+            address: '',
+            capacity: 0,
+            num_parking: 0,
+            google_map_url: '',
+            check_in_time: '15:00',
+            check_out_time: '10:00',
+            description: '',
         });
     }, [property]);
 
     const handleChange = (e) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
+        const { name, value, type } = e.target;
+        setFormData(prev => ({ ...prev, [name]: type === 'number' ? parseInt(value, 10) : value }));
     };
 
     const handleSubmit = (e) => {
@@ -49,7 +56,34 @@ const PropertyForm = ({ property, onSave, onCancel }) => {
                         <label>管理形態</label>
                         <input name="management_type" value={formData.management_type || ''} onChange={handleChange} />
                     </div>
-                    {/* Add other fields from the Property model as needed */}
+                    <div className="form-group">
+                        <label>住所</label>
+                        <input name="address" value={formData.address || ''} onChange={handleChange} />
+                    </div>
+                    <div className="form-group">
+                        <label>最大収容人数</label>
+                        <input type="number" name="capacity" value={formData.capacity || 0} onChange={handleChange} />
+                    </div>
+                    <div className="form-group">
+                        <label>駐車台数</label>
+                        <input type="number" name="num_parking" value={formData.num_parking || 0} onChange={handleChange} />
+                    </div>
+                    <div className="form-group">
+                        <label>チェックイン時刻</label>
+                        <input type="time" name="check_in_time" value={formData.check_in_time || ''} onChange={handleChange} />
+                    </div>
+                    <div className="form-group">
+                        <label>チェックアウト時刻</label>
+                        <input type="time" name="check_out_time" value={formData.check_out_time || ''} onChange={handleChange} />
+                    </div>
+                    <div className="form-group">
+                        <label>施設説明</label>
+                        <textarea name="description" value={formData.description || ''} onChange={handleChange} rows="4"></textarea>
+                    </div>
+                    <div className="form-group">
+                        <label>Google Map URL</label>
+                        <textarea name="google_map_url" value={formData.google_map_url || ''} onChange={handleChange} rows="2"></textarea>
+                    </div>
                     <button type="submit" className="btn-primary">保存</button>
                     <button type="button" onClick={onCancel}>キャンセル</button>
                 </form>
@@ -134,6 +168,8 @@ function PropertyManagement() {
                     <thead>
                         <tr>
                             <th>施設名</th>
+                            <th>住所</th>
+                            <th>最大収容人数</th>
                             <th>管理形態</th>
                             <th>操作</th>
                         </tr>
@@ -142,6 +178,8 @@ function PropertyManagement() {
                         {properties.map(prop => (
                             <tr key={prop.id}>
                                 <td>{prop.name}</td>
+                                <td>{prop.address}</td>
+                                <td>{prop.capacity}</td>
                                 <td>{prop.management_type}</td>
                                 <td>
                                     <button onClick={() => handleEdit(prop)}>編集</button>
