@@ -1,7 +1,12 @@
 # backend/guest_forms/serializers.py
 
 from rest_framework import serializers
-from .models import FormField, FormTemplate
+from .models import FormField, FormTemplate, Property
+
+class PropertySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Property
+        fields = '__all__'
 
 class FormFieldSerializer(serializers.ModelSerializer):
     """
