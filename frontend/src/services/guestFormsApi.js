@@ -26,3 +26,7 @@ export const submitGuestForm = (token, formData) => {
     },
   });
 };
+
+export const updateGuestForm = (token, formData) => {
+  return apiClient.put(`/guest-forms/${token}/update/`, formData);
+};

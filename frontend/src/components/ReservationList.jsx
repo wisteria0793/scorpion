@@ -10,18 +10,13 @@ function ReservationList() {
     const [reservations, setReservations] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    const [availableYears, setAvailableYears] = useState([]);
-    const [availableProperties, setAvailableProperties] = useState([]);
+    const currentYear = new Date().getFullYear();
+    const [availableYears, setAvailableYears] = useState([currentYear, currentYear - 1, currentYear - 2, currentYear - 3]);
+    const [availableProperties, setAvailableProperties] = useState(['ゲストハウス巴.com', 'ONE PIECE HOUSE', '巴.com3 Music&Stay', '巴.com4 Motomachi', '巴.com5 Cafe&Stay', '巴.com PremiumStay', 'mimosa', 'Iris']);
 
-    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+    const [selectedYear, setSelectedYear] = useState(currentYear);
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
     const [selectedProperty, setSelectedProperty] = useState('');
-
-    useEffect(() => {
-        const currentYear = new Date().getFullYear();
-        setAvailableYears([currentYear, currentYear - 1, currentYear - 2, currentYear - 3]);
-        setAvailableProperties(['ゲストハウス巴.com', 'ONE PIECE HOUSE', '巴.com3 Music&Stay', '巴.com4 Motomachi', '巴.com5 Cafe&Stay', '巴.com PremiumStay', 'mimosa', 'Iris']);
-    }, []);
 
     useEffect(() => {
         setLoading(true);
@@ -33,6 +28,8 @@ function ReservationList() {
         fetchMonthlyReservations(params)
             .then(data => {
                 setReservations(data);
+            })
+            .finally(() => {
                 setLoading(false);
             });
     }, [selectedYear, selectedMonth, selectedProperty]);
@@ -46,7 +43,7 @@ function ReservationList() {
             <Typography variant="h4" component="h1" gutterBottom>月別 予約一覧</Typography>
             <Paper sx={{ p: 2, mb: 3 }}>
                 <Grid container spacing={2} alignItems="center">
-                    <Grid item xs={12} sm={4}>
+                    <Grid xs={12} sm={3}>
                         <FormControl fullWidth>
                             <InputLabel>年</InputLabel>
                             <Select value={selectedYear} label="年" onChange={(e) => setSelectedYear(e.target.value)}>
@@ -54,7 +51,7 @@ function ReservationList() {
                             </Select>
                         </FormControl>
                     </Grid>
-                    <Grid item xs={12} sm={4}>
+                    <Grid xs={12} sm={3}>
                          <FormControl fullWidth>
                             <InputLabel>月</InputLabel>
                             <Select value={selectedMonth} label="月" onChange={(e) => setSelectedMonth(e.target.value)}>
@@ -62,10 +59,10 @@ function ReservationList() {
                             </Select>
                         </FormControl>
                     </Grid>
-                    <Grid item xs={12} sm={4}>
+                    <Grid xs={12} sm={6}>
                          <FormControl fullWidth>
                             <InputLabel>施設</InputLabel>
-                            <Select value={selectedProperty} label="施設" onChange={(e) => setSelectedProperty(e.target.value)}>
+                            <Select value={selectedProperty} label="施設" onChange={(e) => setSelectedProperty(e.target.value)} renderValue={(selected) => selected || '全施設'}>
                                 <MenuItem value="">全施設</MenuItem>
                                 {availableProperties.map(propName => <MenuItem key={propName} value={propName}>{propName}</MenuItem>)}
                             </Select>

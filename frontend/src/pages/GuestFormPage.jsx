@@ -1,7 +1,7 @@
 // frontend/src/pages/GuestFormPage.jsx
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { getFormDefinition, submitGuestForm } from '../services/guestFormsApi';
+import { getFormDefinition, submitGuestForm, updateGuestForm } from '../services/guestFormsApi';
 import FormField from '../components/FormField'; // FormFieldコンポーネントをインポート
 
 export default function GuestFormPage() {
@@ -12,12 +12,17 @@ export default function GuestFormPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [hasSubmitted, setHasSubmitted] = useState(false);
 
   useEffect(() => {
     const fetchForm = async () => {
       try {
         const response = await getFormDefinition(token);
-        setFormDef(response.data);
+        setFormDef(response.data.form_definition);
+        if (response.data.submitted_data && Object.keys(response.data.submitted_data).length > 0) {
+          setFormData(response.data.submitted_data);
+          setHasSubmitted(true);
+        }
       } catch (err) {
         setError('フォームの読み込みに失敗しました。URLが無効か、期限切れの可能性があります。');
       } finally {
@@ -47,7 +52,11 @@ export default function GuestFormPage() {
     }
 
     try {
-      await submitGuestForm(token, submissionData);
+      if (hasSubmitted) {
+        await updateGuestForm(token, submissionData);
+      } else {
+        await submitGuestForm(token, submissionData);
+      }
       setSuccess(true);
     } catch (err) {
       setError('提出に失敗しました。もう一度お試しください。');
@@ -63,7 +72,7 @@ export default function GuestFormPage() {
 
   return (
     <div>
-      <h1>{formDef.name}</h1>
+      <h1>宿泊者名簿</h1>
       <form onSubmit={handleSubmit}>
         {formDef.fields.map((field) => (
           <FormField 
@@ -74,7 +83,7 @@ export default function GuestFormPage() {
           />
         ))}
         <button type="submit" disabled={submitting}>
-          {submitting ? '送信中...' : '提出する'}
+          {submitting ? '送信中...' : (hasSubmitted ? '更新する' : '提出する')}
         </button>
       </form>
     </div>

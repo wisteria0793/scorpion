@@ -1,8 +1,12 @@
 # backend/guest_forms/views.py
 from rest_framework import viewsets
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
 from rest_framework.parsers import MultiPartParser, FormParser
-from .models import Property, FacilityImage
-from .serializers import PropertySerializer, FacilityImageSerializer
+
+from .models import Property, FacilityImage, GuestSubmission, FormTemplate
+from .serializers import PropertySerializer, FacilityImageSerializer, FormTemplateSerializer, GuestSubmissionSerializer
 
 class PropertyViewSet(viewsets.ModelViewSet):
     """
@@ -30,3 +34,83 @@ class FacilityImageViewSet(viewsets.ModelViewSet):
         Associate the uploaded image with the property from the URL.
         """
         serializer.save(property_id=self.kwargs['property_pk'])
+
+
+class GuestFormDetailView(APIView):
+    """
+    GET /api/guest-forms/{token}/
+    トークンを元に、表示すべきフォームの定義(JSON)と、既存の提出データを返す
+    """
+    def get(self, request, token):
+        try:
+            submission = GuestSubmission.objects.get(token=token)
+            template = submission.reservation.property.form_template
+            
+            if not template:
+                return Response({"error": "この施設にはフォームが設定されていません。"}, status=status.HTTP_404_NOT_FOUND)
+
+            template_serializer = FormTemplateSerializer(template)
+            submission_serializer = GuestSubmissionSerializer(submission)
+            
+            response_data = {
+                'form_definition': template_serializer.data,
+                'submitted_data': submission_serializer.data.get('submitted_data', {})
+            }
+            
+            return Response(response_data, status=status.HTTP_200_OK)
+
+        except GuestSubmission.DoesNotExist:
+            return Response({"error": "無効なトークンです。"}, status=status.HTTP_404_NOT_FOUND)
+
+
+class GuestFormSubmitView(APIView):
+    """
+    POST /api/guest-forms/{token}/submit/
+    ゲストが入力したフォームの内容を保存する
+    """
+    parser_classes = [MultiPartParser, FormParser] # ファイルアップロードに対応
+
+    def post(self, request, token):
+        try:
+            submission = GuestSubmission.objects.get(token=token)
+            
+            if submission.status == GuestSubmission.SubmissionStatus.COMPLETED:
+                return Response({"error": "既に提出済みです。"}, status=status.HTTP_409_CONFLICT)
+
+            # ファイル以外のデータを submitted_data (JSONField) に保存
+            submission.submitted_data = request.data
+            
+            # ここにファイル処理のロジックを追記する
+            # 例: request.FILES内のファイルをS3などにアップロードし、そのURLをsubmitted_dataに含める
+            # for key, file in request.FILES.items():
+            #     file_url = upload_to_s3(file) 
+            #     submission.submitted_data[key] = file_url
+
+            submission.status = GuestSubmission.SubmissionStatus.COMPLETED
+            submission.save()
+            
+            # 予約自体のステータスも更新
+            submission.reservation.guest_roster_status = Reservation.RosterStatus.SUBMITTED
+            submission.reservation.save()
+
+            return Response(status=status.HTTP_201_CREATED)
+
+        except GuestSubmission.DoesNotExist:
+            return Response({"error": "無効なトークンです。"}, status=status.HTTP_404_NOT_FOUND)
+
+
+class GuestFormUpdateView(APIView):
+    """
+    PUT /api/guest-forms/{token}/update/
+    ゲストが入力したフォームの内容を更新する
+    """
+    def put(self, request, token):
+        try:
+            submission = GuestSubmission.objects.get(token=token)
+            serializer = GuestSubmissionSerializer(submission, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except GuestSubmission.DoesNotExist:
+            return Response({"error": "無効なトークンです。"}, status=status.HTTP_404_NOT_FOUND)

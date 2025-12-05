@@ -1,7 +1,7 @@
 # backend/guest_forms/serializers.py
 
 from rest_framework import serializers
-from .models import FormField, FormTemplate, Property, FacilityImage
+from .models import FormField, FormTemplate, Property, FacilityImage, GuestSubmission
 
 class FacilityImageSerializer(serializers.ModelSerializer):
     class Meta:
@@ -34,3 +34,11 @@ class FormTemplateSerializer(serializers.ModelSerializer):
     class Meta:
         model = FormTemplate
         fields = ['name', 'fields']
+
+class GuestSubmissionSerializer(serializers.ModelSerializer):
+    """
+    ゲストからの提出データをJSON化するためのシリアライザー
+    """
+    class Meta:
+        model = GuestSubmission
+        fields = ['submitted_data']
