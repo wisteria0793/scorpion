@@ -12,6 +12,7 @@ import PropertyFormPage from './pages/PropertyFormPage';
 import RequireAuth from './components/RequireAuth';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import DebugReservationsPage from './pages/DebugReservationsPage';
 import './index.css';
 
 // New Root component to handle initial authentication check
@@ -41,6 +42,10 @@ const router = createBrowserRouter([
   {
     path: '/',
     element: <Root />,
+  },
+  {
+    path: '/debug/reservations',
+    element: <DebugReservationsPage />,
   },
   {
     path: '/check-in/:facilitySlug',

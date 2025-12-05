@@ -80,6 +80,8 @@ function ReservationList() {
                             <TableCell>施設</TableCell>
                             <TableCell>泊数</TableCell>
                             <TableCell>人数</TableCell>
+                            <TableCell>名簿</TableCell>
+                            <TableCell>宿泊税</TableCell>
                             <TableCell>合計料金</TableCell>
                             <TableCell>ステータス</TableCell>
                         </TableRow>
@@ -96,13 +98,15 @@ function ReservationList() {
                                         (new Date(res.check_out_date) - new Date(res.check_in_date)) / (1000 * 60 * 60 * 24) : 1
                                     }泊</TableCell>
                                     <TableCell>{res.num_guests}名</TableCell>
+                                    <TableCell>{res.guest_roster_status}</TableCell>
+                                    <TableCell>{res.accommodation_tax_status}</TableCell>
                                     <TableCell>¥{Number(res.total_price).toLocaleString()}</TableCell>
                                     <TableCell>{res.status}</TableCell>
                                 </TableRow>
                             ))
                         ) : (
                             <TableRow>
-                                <TableCell colSpan={7} align="center">表示する予約がありません。</TableCell>
+                                <TableCell colSpan={9} align="center">表示する予約がありません。</TableCell>
                             </TableRow>
                         )}
                     </TableBody>

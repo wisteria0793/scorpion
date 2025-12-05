@@ -9,7 +9,7 @@ import {
 import { 
     Box, Typography, Paper, Grid, FormControl, InputLabel, Select, MenuItem, 
     Tabs, Tab, CircularProgress, Table, TableBody, TableCell, TableContainer, 
-    TableHead, TableRow 
+    TableHead, TableRow, Button 
 } from '@mui/material';
 
 // Tooltip and Legend components
@@ -124,9 +124,34 @@ function RevenueAnalysis() {
             </Box>
             
             <Paper sx={{ p: 2, mb: 3 }}>
-                <Grid container spacing={2}>
-                    <Grid xs={12} sm={4}><FormControl fullWidth><InputLabel>会計年度</InputLabel><Select value={selectedYear} label="会計年度" onChange={(e) => setSelectedYear(e.target.value)}>{availableYears.map(y => <MenuItem key={y} value={y}>{y}年度</MenuItem>)}</Select></FormControl></Grid>
-                    <Grid xs={12} sm={8}><FormControl fullWidth><InputLabel>施設</InputLabel><Select value={selectedProperty} label="施設" onChange={(e) => setSelectedProperty(e.target.value)} renderValue={(selected) => selected || '全施設'}><MenuItem value="">全施設</MenuItem>{availableProperties.map(p => <MenuItem key={p} value={p}>{p}</MenuItem>)}</Select></FormControl></Grid>
+                <Grid container spacing={2} alignItems="center">
+                    <Grid xs={12} sm={4}>
+                        <FormControl fullWidth>
+                            <InputLabel>会計年度</InputLabel>
+                            <Select value={selectedYear} label="会計年度" onChange={(e) => setSelectedYear(e.target.value)}>
+                                {availableYears.map(y => <MenuItem key={y} value={y}>{y}年度</MenuItem>)}
+                            </Select>
+                        </FormControl>
+                    </Grid>
+                    <Grid xs={12} sm={8}>
+                        <FormControl fullWidth>
+                            <InputLabel>施設</InputLabel>
+                            <Select value={selectedProperty} label="施設" onChange={(e) => setSelectedProperty(e.target.value)} renderValue={(selected) => selected || '全施設'}>
+                                <MenuItem value="">全施設</MenuItem>
+                                {availableProperties.map(p => <MenuItem key={p} value={p}>{p}</MenuItem>)}
+                            </Select>
+                        </FormControl>
+                    </Grid>
+                    {selectedProperty === '' && (
+                        <Grid xs={12} sx={{ mt: 1, textAlign: 'right' }}>
+                            <Button variant="outlined" onClick={() => {
+                                const url = `http://localhost:8000/api/revenue/csv/?year=${selectedYear}`;
+                                window.open(url, '_blank');
+                            }}>
+                                CSVダウンロード
+                            </Button>
+                        </Grid>
+                    )}
                 </Grid>
             </Paper>
 

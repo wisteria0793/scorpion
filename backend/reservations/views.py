@@ -13,7 +13,7 @@ from django.db.models.functions import TruncMonth, Extract
 
 from .models import Reservation, SyncStatus
 from guest_forms.models import GuestSubmission, Property, FormTemplate
-from .serializers import SyncStatusSerializer, ReservationSerializer
+from .serializers import SyncStatusSerializer, ReservationSerializer, DebugReservationSerializer
 
 
 class ReservationLookupView(APIView):
@@ -270,6 +270,113 @@ class NationalityRatioAPIView(APIView):
         return Response(response_data)
 
 
+from django.http import HttpResponse
+import csv
+
+class DownloadRevenueCSVView(APIView):
+    """
+    選択された会計年度の売上データをCSV形式でダウンロードするAPIビュー。
+    """
+    def get(self, request, *args, **kwargs):
+        try:
+            today = date.today()
+            default_year = today.year - 1 if today.month < 3 else today.year
+            selected_year = int(request.query_params.get('year', default_year))
+        except (ValueError, TypeError):
+            selected_year = default_year
+
+        # 会計年度の開始日と終了日を決定
+        start_date = date(selected_year, 3, 1)
+        end_date = date(selected_year + 1, 3, 1) - timedelta(days=1)
+
+        # データ取得
+        queryset = Reservation.objects.filter(
+            check_in_date__range=(start_date, end_date),
+            status__in=['Confirmed', 'New']
+        ).select_related('property')
+
+        # 施設ごと、および管理タイプごとの月別売上を計算
+        facility_monthly_sales = defaultdict(lambda: defaultdict(int))
+        subtotals = defaultdict(lambda: defaultdict(int))
+        facilities_by_type = defaultdict(list)
+        
+        for res in queryset:
+            month_key = res.check_in_date.strftime('%Y-%m')
+            prop = res.property
+            
+            facility_monthly_sales[prop.name][month_key] += res.total_price
+            
+            management_type = prop.management_type or '不明'
+            subtotals[management_type][month_key] += res.total_price
+            
+            if prop.name not in facilities_by_type[management_type]:
+                facilities_by_type[management_type].append(prop.name)
+
+        # CSVファイルを作成
+        response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
+        response['Content-Disposition'] = f'attachment; filename="revenue_{selected_year}_{today.strftime("%Y%m%d")}.csv"'
+        
+        writer = csv.writer(response)
+
+        # 生成日を記入
+        writer.writerow([f"生成日: {today.strftime('%Y-%m-%d')}"])
+        writer.writerow([]) # 空行
+
+        # ヘッダー行の作成
+        months = []
+        current_date = start_date
+        while current_date <= end_date:
+            months.append(current_date.strftime('%Y-%m'))
+            if current_date.month == 12:
+                current_date = date(current_date.year + 1, 1, 1)
+            else:
+                current_date = date(current_date.year, current_date.month + 1, 1)
+
+        header = ["施設名"] + months + ["年間売上"]
+        writer.writerow(header)
+
+        # データ行の作成 (管理タイプごとにグループ化し、その後に小計)
+        all_monthly_totals = defaultdict(int)
+        
+        # '自社' を先に、次に '受託'、その後に他のタイプをソートして表示
+        management_order = ['自社', '受託']
+        sorted_types = sorted(facilities_by_type.keys(), key=lambda x: (management_order.index(x) if x in management_order else len(management_order), x))
+
+        for m_type in sorted_types:
+            # 管理タイプごとのセクションヘッダー (任意)
+            writer.writerow([f"--- {m_type} ---"])
+            
+            for facility in sorted(facilities_by_type[m_type]):
+                monthly_sales = facility_monthly_sales[facility]
+                yearly_sales = sum(monthly_sales.values())
+                row = [facility]
+                for month in months:
+                    sales = monthly_sales.get(month, 0)
+                    row.append(sales)
+                    all_monthly_totals[month] += sales # 合計行のために集計
+                row.append(yearly_sales)
+                writer.writerow(row)
+            
+            # 管理タイプごとの小計
+            if m_type in subtotals:
+                monthly_sales = subtotals[m_type]
+                yearly_total = sum(monthly_sales.values())
+                row = [f"小計({m_type})"]
+                for month in months:
+                    row.append(monthly_sales.get(month, 0))
+                row.append(yearly_total)
+                writer.writerow(row)
+            writer.writerow([]) # セクション間の空行
+            
+        # 合計行の作成
+        grand_total = sum(all_monthly_totals.values())
+        total_row = ["合計"]
+        for month in months:
+            total_row.append(all_monthly_totals[month])
+        total_row.append(grand_total)
+        writer.writerow(total_row)
+
+        return response
 class MonthlyReservationListView(APIView):
     """
     指定された年/月の予約リストを返すAPIビュー。
@@ -289,10 +396,19 @@ class MonthlyReservationListView(APIView):
         queryset = Reservation.objects.filter(
             check_in_date__year=year,
             check_in_date__month=month
-        ).order_by('check_in_date')
+        ).exclude(status='Cancelled').select_related('property').prefetch_related('guestsubmission').order_by('check_in_date')
 
         if property_name:
             queryset = queryset.filter(property__name=property_name)
 
         serializer = ReservationSerializer(queryset, many=True)
+        return Response(serializer.data)
+
+class DebugReservationListView(APIView):
+    """
+    デバッグ用：すべての予約データを返す（最新100件）
+    """
+    def get(self, request, *args, **kwargs):
+        queryset = Reservation.objects.order_by('-updated_at')[:100]
+        serializer = DebugReservationSerializer(queryset, many=True)
         return Response(serializer.data)
