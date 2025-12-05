@@ -7,3 +7,5 @@ requests
 gunicorn
 psycopg2-binary
 Pillow
+whitenoise
+dj-database-url
