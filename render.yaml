@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: scorpion-backend
+    env: docker
+    branch: main
+    buildCommand: ''
+    startCommand: 'gunicorn api.wsgi:application --bind 0.0.0.0:$PORT --workers 3'
+    dockerfilePath: backend/Dockerfile
+    plan: free
+
+databases:
+  - name: scorpion-db
+    databaseName: scorpion
+    user: scorpion
+    password: ''
+    plan: starter
+    # When you import this file into Render, it will provision a Postgres instance.
