@@ -32,7 +32,10 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 DEBUG = os.getenv("DEBUG", "False") == "True"
 
 # ALLOWED_HOSTS should be set via environment variable as a comma-separated list
-_allowed_hosts = os.getenv("ALLOWED_HOSTS", "")
+_allowed_hosts = os.getenv(
+    "ALLOWED_HOSTS",
+    "localhost,127.0.0.1,scorpion-1aif.onrender.com,scorpion-eosin.vercel.app",
+)
 ALLOWED_HOSTS = [h.strip() for h in _allowed_hosts.split(",") if h.strip()]
 
 
@@ -158,13 +161,19 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 # CORS設定
-_cors_origins = os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:5173')
+_cors_origins = os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:5173,https://scorpion-eosin.vercel.app')
 CORS_ALLOWED_ORIGINS = [o.strip() for o in _cors_origins.split(',') if o.strip()]
 CORS_ALLOW_CREDENTIALS = True
 
 # CSRF trusted origins can also be provided via env (comma-separated)
-_csrf_trusted = os.getenv('CSRF_TRUSTED_ORIGINS', 'http://localhost:5173,http://127.0.0.1:5173')
+_csrf_trusted = os.getenv('CSRF_TRUSTED_ORIGINS', 'http://localhost:5173,http://127.0.0.1:5173,https://scorpion-eosin.vercel.app')
 CSRF_TRUSTED_ORIGINS = [o.strip() for o in _csrf_trusted.split(',') if o.strip()]
+
+# Cross-site SPA uses cookies; force secure + SameSite=None so the browser accepts them across domains
+SESSION_COOKIE_SAMESITE = 'None'
+CSRF_COOKIE_SAMESITE = 'None'
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
 
 # If sitting behind a proxy/load balancer that sets X-Forwarded-Proto
 if os.getenv('USE_X_FORWARDED_HOST', 'False') == 'True':
