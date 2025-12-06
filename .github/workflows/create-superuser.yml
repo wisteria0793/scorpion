@@ -1,0 +1,44 @@
+name: Create Django Superuser
+
+on:
+  workflow_dispatch:
+    inputs:
+      username:
+        description: 'Admin username'
+        required: true
+        default: 'admin'
+      email:
+        description: 'Admin email'
+        required: true
+      password:
+        description: 'Admin password'
+        required: true
+
+jobs:
+  create-superuser:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        working-directory: backend
+        run: |
+          pip install -r requirements.txt
+      
+      - name: Create superuser
+        working-directory: backend
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          DJANGO_SUPERUSER_USERNAME: ${{ github.event.inputs.username }}
+          DJANGO_SUPERUSER_EMAIL: ${{ github.event.inputs.email }}
+          DJANGO_SUPERUSER_PASSWORD: ${{ github.event.inputs.password }}
+        run: |
+          python manage.py createsuperuser --noinput
