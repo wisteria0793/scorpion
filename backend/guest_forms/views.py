@@ -4,6 +4,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny
 
 from .models import Property, FacilityImage, GuestSubmission, FormTemplate
 from .serializers import PropertySerializer, FacilityImageSerializer, FormTemplateSerializer, GuestSubmissionSerializer
@@ -14,6 +16,8 @@ class PropertyViewSet(viewsets.ModelViewSet):
     """
     queryset = Property.objects.all().order_by('name')
     serializer_class = PropertySerializer
+    permission_classes = [AllowAny]
+    permission_classes = [AllowAny]
 
 class FacilityImageViewSet(viewsets.ModelViewSet):
     """
