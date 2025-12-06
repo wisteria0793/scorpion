@@ -81,7 +81,7 @@ class RevenueAPIView(APIView):
 
         # 特定の施設が指定されていれば、それでフィルタリング
         if property_name:
-            queryset = queryset.filter(property__management_type=property_name)
+            queryset = queryset.filter(property__name=property_name)
 
         # 全施設か単一施設かで返すデータ形式を変える
         if property_name:
@@ -208,7 +208,7 @@ class YoYRevenueAPIView(APIView):
             status__in=['Confirmed', 'New']
         )
         if property_name:
-            queryset = queryset.filter(property__management_type=property_name)
+            queryset = queryset.filter(property__name=property_name)
         
         monthly_totals = queryset.annotate(
             month=Extract('check_in_date', 'month')
@@ -399,7 +399,7 @@ class MonthlyReservationListView(APIView):
         ).exclude(status='Cancelled').select_related('property').prefetch_related('guestsubmission').order_by('check_in_date')
 
         if property_name:
-            queryset = queryset.filter(property__management_type=property_name)
+            queryset = queryset.filter(property__name=property_name)
 
         serializer = ReservationSerializer(queryset, many=True)
         return Response(serializer.data)
