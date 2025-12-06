@@ -94,14 +94,14 @@ class RevenueAPIView(APIView):
             
             response_data = self._format_for_single_property(monthly_totals, start_date, end_date)
         else:
-            # 全施設: 管理形態ごとの月別売上を返す (積み上げグラフ用)
-            monthly_by_type = queryset.annotate(
+            # 全施設: 施設ごとの月別売上を返す (積み上げグラフ用)
+            monthly_by_property = queryset.annotate(
                 month=TruncMonth('check_in_date')
-            ).values('month', 'property__management_type').annotate(
+            ).values('month', 'property__name').annotate(
                 total=Sum('total_price')
-            ).order_by('month', 'property__management_type')
+            ).order_by('month', 'property__name')
 
-            response_data = self._format_for_stacked_chart(monthly_by_type, start_date, end_date)
+            response_data = self._format_for_stacked_chart(monthly_by_property, start_date, end_date)
 
         print(f"DEBUG: property_name='{property_name}', response_data={response_data}")
         return Response(response_data)
@@ -124,14 +124,14 @@ class RevenueAPIView(APIView):
             current_date = date(next_year, next_month, 1)
         return result
 
-    def _format_for_stacked_chart(self, monthly_by_type, start_date, end_date):
+    def _format_for_stacked_chart(self, monthly_by_property, start_date, end_date):
         """管理形態ごとの月別クエリセットを、積み上げグラフ用の形式に整形する"""
         pivoted_data = defaultdict(lambda: defaultdict(int))
-        for item in monthly_by_type:
+        for item in monthly_by_property:
             date_key = item['month'].strftime('%Y-%m')
             # management_type が None や空文字の場合は '不明' とする
-            m_type = item['property__management_type'] or '不明'
-            pivoted_data[date_key][m_type] = item['total'] or 0
+            prop_name = item["property__name"] or '不明'
+            pivoted_data[date_key][prop_name] = item['total'] or 0
 
         result = []
         current_date = start_date
