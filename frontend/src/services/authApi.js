@@ -1,4 +1,4 @@
-import apiClient from './apiClient';
+import apiClient, { apiBaseURL } from './apiClient';
 
 const getCookie = (name) => {
   if (typeof document === 'undefined') return '';
@@ -9,8 +9,7 @@ const getCookie = (name) => {
 const ensureCsrf = async () => {
   const existing = getCookie('csrftoken');
   if (existing) return existing;
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
-  await fetch(`${baseUrl}/accounts/csrf/`, { credentials: 'include' });
+  await fetch(`${apiBaseURL}/accounts/csrf/`, { credentials: 'include' });
   return getCookie('csrftoken');
 };
 
