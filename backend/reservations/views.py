@@ -81,7 +81,7 @@ class RevenueAPIView(APIView):
 
         # 特定の施設が指定されていれば、それでフィルタリング
         if property_name:
-            queryset = queryset.filter(property__name=property_name)
+            queryset = queryset.filter(property__management_type=property_name)
 
         # 全施設か単一施設かで返すデータ形式を変える
         if property_name:
@@ -94,14 +94,14 @@ class RevenueAPIView(APIView):
             
             response_data = self._format_for_single_property(monthly_totals, start_date, end_date)
         else:
-            # 全施設: 施設ごとの月別売上を返す (積み上げグラフ用)
-            monthly_by_property = queryset.annotate(
+            # 全施設: 管理形態ごとの月別売上を返す (積み上げグラフ用)
+            monthly_by_type = queryset.annotate(
                 month=TruncMonth('check_in_date')
-            ).values('month', 'property__name').annotate(
+            ).values('month', 'property__management_type').annotate(
                 total=Sum('total_price')
-            ).order_by('month', 'property__name')
+            ).order_by('month', 'property__management_type')
 
-            response_data = self._format_for_stacked_chart(monthly_by_property, start_date, end_date)
+            response_data = self._format_for_stacked_chart(monthly_by_type, start_date, end_date)
 
         print(f"DEBUG: property_name='{property_name}', response_data={response_data}")
         return Response(response_data)
@@ -124,14 +124,14 @@ class RevenueAPIView(APIView):
             current_date = date(next_year, next_month, 1)
         return result
 
-    def _format_for_stacked_chart(self, monthly_by_property, start_date, end_date):
+    def _format_for_stacked_chart(self, monthly_by_type, start_date, end_date):
         """管理形態ごとの月別クエリセットを、積み上げグラフ用の形式に整形する"""
         pivoted_data = defaultdict(lambda: defaultdict(int))
-        for item in monthly_by_property:
+        for item in monthly_by_type:
             date_key = item['month'].strftime('%Y-%m')
             # management_type が None や空文字の場合は '不明' とする
-            prop_name = item["property__name"] or '不明'
-            pivoted_data[date_key][prop_name] = item['total'] or 0
+            m_type = item["property__management_type"] or '不明'
+            pivoted_data[date_key][m_type] = item['total'] or 0
 
         result = []
         current_date = start_date
@@ -208,7 +208,7 @@ class YoYRevenueAPIView(APIView):
             status__in=['Confirmed', 'New']
         )
         if property_name:
-            queryset = queryset.filter(property__name=property_name)
+            queryset = queryset.filter(property__management_type=property_name)
         
         monthly_totals = queryset.annotate(
             month=Extract('check_in_date', 'month')
@@ -251,7 +251,7 @@ class NationalityRatioAPIView(APIView):
         ).select_related('reservation__property')
 
         if property_name:
-            submissions = submissions.filter(reservation__property__name=property_name)
+            submissions = submissions.filter(reservation__property__management_type=property_name)
 
         nationality_counts = defaultdict(int)
         for submission in submissions:
@@ -399,7 +399,7 @@ class MonthlyReservationListView(APIView):
         ).exclude(status='Cancelled').select_related('property').prefetch_related('guestsubmission').order_by('check_in_date')
 
         if property_name:
-            queryset = queryset.filter(property__name=property_name)
+            queryset = queryset.filter(property__management_type=property_name)
 
         serializer = ReservationSerializer(queryset, many=True)
         return Response(serializer.data)
