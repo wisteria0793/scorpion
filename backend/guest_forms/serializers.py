@@ -10,6 +10,18 @@ class FacilityImageSerializer(serializers.ModelSerializer):
         read_only_fields = ['property']
 
 class PropertySerializer(serializers.ModelSerializer):
+    def validate(self, attrs):
+        # 空文字で送られたユニーク許容フィールドは None に正規化して重複エラーを防ぐ
+        for key in ('beds24_property_key', 'room_id'):
+            if attrs.get(key) == '':
+                attrs[key] = None
+
+        # FAQ が未設定なら空配列として扱う
+        if attrs.get('faq') in (None, '', {}):
+            attrs['faq'] = []
+
+        return super().validate(attrs)
+
     class Meta:
         model = Property
         fields = '__all__'

@@ -12,9 +12,11 @@ function Header({ onMenuClick }) {
     const handleLogout = async () => {
         try {
             await logout();
-            navigate('/login');
         } catch (err) {
             console.error('Logout failed', err);
+        } finally {
+            // API失敗時もログイン画面へ戻し、セッションを再取得させる
+            navigate('/login');
         }
     };
 

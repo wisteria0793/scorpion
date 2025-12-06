@@ -68,16 +68,23 @@ function PropertyFormPage() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        const payload = {
+            ...formData,
+            capacity: Number(formData.capacity) || 0,
+            num_parking: Number(formData.num_parking) || 0,
+            beds24_property_key: formData.beds24_property_key?.trim() === '' ? null : formData.beds24_property_key,
+        };
         try {
             if (isEditing) {
-                await updateProperty(id, formData);
+                await updateProperty(id, payload);
             } else {
-                await createProperty(formData);
+                await createProperty(payload);
             }
             navigate('/');
         } catch (err) {
-            setError('保存に失敗しました。');
-            console.error(err);
+            const apiMessage = err?.response?.data ? JSON.stringify(err.response.data) : '';
+            setError(`保存に失敗しました。${apiMessage}`);
+            console.error('Failed to save property', err);
         }
     };
 

@@ -67,7 +67,12 @@ export function AuthProvider({ children }) {
   };
 
   const logout = async () => {
-    await authApi.logout();
+    try {
+      await authApi.logout();
+    } catch (err) {
+      // ネットワークやCSRFエラー時もフロントの状態は確実にクリアする
+      console.warn('logout request failed, clearing local state anyway', err);
+    }
     setUser(null);
   };
 
