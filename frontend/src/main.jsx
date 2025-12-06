@@ -71,7 +71,7 @@ const router = createBrowserRouter([
       </RequireAuth>
     ),
   },
-], { basename: '/scorpion/' });
+], { basename: import.meta.env.VITE_BASE_PATH || '/scorpion/' });
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:vercel": "VITE_BASE_PATH=/ vite build",
+    "build:pages": "VITE_BASE_PATH=/scorpion/ vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },

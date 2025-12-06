@@ -145,7 +145,8 @@ function RevenueAnalysis() {
                     {selectedProperty === '' && (
                         <Grid xs={12} sx={{ mt: 1, textAlign: 'right' }}>
                             <Button variant="outlined" onClick={() => {
-                                const url = `http://localhost:8000/api/revenue/csv/?year=${selectedYear}`;
+                                const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+                                const url = `${baseUrl}/revenue/csv/?year=${selectedYear}`;
                                 window.open(url, '_blank');
                             }}>
                                 CSVダウンロード
