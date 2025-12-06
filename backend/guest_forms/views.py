@@ -4,13 +4,10 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.parsers import MultiPartParser, FormParser
-from django.utils.decorators import method_decorator
-from django.views.decorators.csrf import csrf_exempt
 
 from .models import Property, FacilityImage, GuestSubmission, FormTemplate
 from .serializers import PropertySerializer, FacilityImageSerializer, FormTemplateSerializer, GuestSubmissionSerializer
 
-@method_decorator(csrf_exempt, name='dispatch')
 class PropertyViewSet(viewsets.ModelViewSet):
     """
     API endpoint that allows properties to be viewed or edited.
