@@ -24,8 +24,9 @@ export function AuthProvider({ children }) {
     async function loadUser() {
       try {
         // request CSRF cookie to be set by the server (must include credentials)
+        const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
         try {
-          await fetch('http://localhost:8000/api/auth/csrf/', { credentials: 'include' });
+          await fetch(`${baseUrl}/accounts/csrf/`, { credentials: 'include' });
         } catch (e) {
           // ignore - csrf endpoint might fail in some envs
         }
