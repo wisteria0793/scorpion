@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { fetchRevenueData, fetchYoYRevenueData, fetchNationalityData, getLastSyncTime } from '../services/revenueApi';
 import { fetchMonthlyReservations } from '../services/reservationApi';
+import { getProperties } from '../services/propertyApi';
 import {
     ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
     PieChart, Pie, Cell, BarChart
@@ -52,7 +53,16 @@ function RevenueAnalysis() {
     const [selectedProperty, setSelectedProperty] = useState('');
 
     useEffect(() => {
-        setAvailableProperties(['ゲストハウス巴.com', 'ONE PIECE HOUSE', '巴.com3 Music&Stay', '巴.com4 Motomachi', '巴.com5 Cafe&Stay', '巴.com PremiumStay', 'mimosa', 'Iris']);
+        // プロパティ一覧を API から取得（委託管理も含める）
+        getProperties()
+            .then(resp => {
+                const names = Array.from(new Set((resp.data || []).map(p => p.name))).sort();
+                if (names.length) setAvailableProperties(names);
+            })
+            .catch(err => {
+                console.warn('Failed to load properties for filter, fallback to empty', err);
+                setAvailableProperties([]);
+            });
         getLastSyncTime().then(data => setLastSyncTime(data.last_sync_time));
     }, []);
 
