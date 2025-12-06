@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { Box, Button, TextField, Typography, Paper, Alert, Container } from '@mui/material';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
@@ -15,28 +16,58 @@ export default function LoginPage() {
     setError(null);
     try {
       await loginAction({ username, password });
-      // on success, redirect to home
       navigate('/');
     } catch (err) {
-      setError(err?.response?.data?.detail || 'Login failed');
+      setError(err?.response?.data?.detail || 'ログインに失敗しました');
     }
   };
 
   return (
-    <div className="auth-page">
-      <h2>Login</h2>
-      <form onSubmit={handleSubmit} className="auth-form">
-        <div>
-          <label>Username</label>
-          <input value={username} onChange={(e) => setUsername(e.target.value)} />
-        </div>
-        <div>
-          <label>Password</label>
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
-        </div>
-        {error && <div className="error">{error}</div>}
-        <button type="submit">Login</button>
-      </form>
-    </div>
+    <Container maxWidth="sm">
+      <Box sx={{ mt: 8, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <Paper elevation={3} sx={{ p: 4, width: '100%' }}>
+          <Typography variant="h4" component="h1" gutterBottom align="center">
+            ログイン
+          </Typography>
+          <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
+            <TextField
+              label="ユーザー名またはメールアドレス"
+              fullWidth
+              margin="normal"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              required
+            />
+            <TextField
+              label="パスワード"
+              type="password"
+              fullWidth
+              margin="normal"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+            {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
+            <Button
+              type="submit"
+              fullWidth
+              variant="contained"
+              size="large"
+              sx={{ mt: 3, mb: 2 }}
+            >
+              ログイン
+            </Button>
+            <Box sx={{ textAlign: 'center' }}>
+              <Typography variant="body2">
+                アカウントをお持ちでない場合は{' '}
+                <Link to="/register" style={{ color: '#1976d2', textDecoration: 'none' }}>
+                  新規登録
+                </Link>
+              </Typography>
+            </Box>
+          </Box>
+        </Paper>
+      </Box>
+    </Container>
   );
 }
