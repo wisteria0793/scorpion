@@ -1,22 +1,12 @@
 // src/services/apiClient.js
 import axios from 'axios';
 
-// Decide API base URL per environment: use env if set, localhost in dev, same-origin proxy in prod.
-const envBase = import.meta.env.VITE_API_BASE_URL;
-const computedBase = (() => {
-  if (envBase) return envBase;
-  if (typeof window !== 'undefined') {
-    const host = window.location.hostname;
-    const isLocal = host === 'localhost' || host === '127.0.0.1';
-    return isLocal ? 'http://localhost:8000/api' : `${window.location.origin}/api`;
-  }
-  return 'http://localhost:8000/api';
-})();
+const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
-export const apiBaseURL = computedBase;
+export const apiBaseURL = baseURL;
 
 const apiClient = axios.create({
-  baseURL: computedBase,
+  baseURL: baseURL,
   headers: {
     'Content-Type': 'application/json',
   },

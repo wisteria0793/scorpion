@@ -19,6 +19,7 @@ class RegisterView(APIView):
         return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class LoginView(APIView):
     permission_classes = [AllowAny]
 
@@ -42,6 +43,7 @@ class LoginView(APIView):
         return Response(UserSerializer(user).data, status=status.HTTP_200_OK)
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
 
