@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import * as authApi from '../services/authApi';
-import apiClient from '../services/apiClient'; // Import the shared apiClient
+import apiClient, { apiBaseURL } from '../services/apiClient'; // Import the shared apiClient
 
 const AuthContext = createContext({});
 
@@ -24,9 +24,8 @@ export function AuthProvider({ children }) {
     async function loadUser() {
       try {
         // request CSRF cookie to be set by the server (must include credentials)
-        const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
         try {
-          await fetch(`${baseUrl}/accounts/csrf/`, { credentials: 'include' });
+          await fetch(`${apiBaseURL}/accounts/csrf/`, { credentials: 'include' });
         } catch (e) {
           // ignore - csrf endpoint might fail in some envs
         }
