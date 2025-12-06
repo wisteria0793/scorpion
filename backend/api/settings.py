@@ -163,10 +163,12 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # CORS設定
 _cors_origins = os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:5173,https://scorpion-eosin.vercel.app')
 CORS_ALLOWED_ORIGINS = [o.strip() for o in _cors_origins.split(',') if o.strip()]
+# Allow any Vercel preview domain (e.g., *.vercel.app)
+CORS_ALLOWED_ORIGIN_REGEXES = [r'^https://.*\.vercel\.app$']
 CORS_ALLOW_CREDENTIALS = True
 
 # CSRF trusted origins can also be provided via env (comma-separated)
-_csrf_trusted = os.getenv('CSRF_TRUSTED_ORIGINS', 'http://localhost:5173,http://127.0.0.1:5173,https://scorpion-eosin.vercel.app')
+_csrf_trusted = os.getenv('CSRF_TRUSTED_ORIGINS', 'http://localhost:5173,http://127.0.0.1:5173,https://scorpion-eosin.vercel.app,https://*.vercel.app')
 CSRF_TRUSTED_ORIGINS = [o.strip() for o in _csrf_trusted.split(',') if o.strip()]
 
 # Cross-site SPA uses cookies; force secure + SameSite=None so the browser accepts them across domains
@@ -175,7 +177,7 @@ CSRF_COOKIE_SAMESITE = 'None'
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 
-# If sitting behind a proxy/load balancer that sets X-Forwarded-Proto
+# If sitting behind a proxy/load_balancer that sets X-Forwarded-Proto
 if os.getenv('USE_X_FORWARDED_HOST', 'False') == 'True':
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
