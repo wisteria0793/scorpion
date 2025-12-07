@@ -9,6 +9,7 @@ import CheckInPage from './pages/CheckInPage';
 import GuestFormPage from './pages/GuestFormPage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import PropertyFormPage from './pages/PropertyFormPage';
+import TourismPage from './pages/TourismPage';
 import RequireAuth from './components/RequireAuth';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
@@ -70,6 +71,10 @@ const router = createBrowserRouter([
         <PropertyFormPage />
       </RequireAuth>
     ),
+  },
+  {
+    path: '/tourism',
+    element: <TourismPage />,
   },
 ], { basename: import.meta.env.VITE_BASE_PATH || '/' });
 
