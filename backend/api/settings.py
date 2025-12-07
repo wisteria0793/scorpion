@@ -50,9 +50,11 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'corsheaders', # 追加
+    'django_filters',
     'guest_forms',
     'accounts',
     'reservations',
+    'tourism',
 ]
 
 MIDDLEWARE = [
