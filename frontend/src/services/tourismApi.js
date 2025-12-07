@@ -6,24 +6,24 @@ import apiClient from './apiClient';
 export const tourismApi = {
   // 観光施設
   getAttractions: async (params = {}) => {
-    const response = await apiClient.get('/api/tourism/attractions/', { params });
+    const response = await apiClient.get('/tourism/attractions/', { params });
     return response.data;
   },
 
   getAttractionById: async (id) => {
-    const response = await apiClient.get(`/api/tourism/attractions/${id}/`);
+    const response = await apiClient.get(`/tourism/attractions/${id}/`);
     return response.data;
   },
 
   getAttractionsByCategory: async (category) => {
-    const response = await apiClient.get('/api/tourism/attractions/by_category/', {
+    const response = await apiClient.get('/tourism/attractions/by_category/', {
       params: { category }
     });
     return response.data;
   },
 
   createAttraction: async (data) => {
-    const response = await apiClient.post('/api/tourism/attractions/', data, {
+    const response = await apiClient.post('/tourism/attractions/', data, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -32,7 +32,7 @@ export const tourismApi = {
   },
 
   updateAttraction: async (id, data) => {
-    const response = await apiClient.patch(`/api/tourism/attractions/${id}/`, data, {
+    const response = await apiClient.patch(`/tourism/attractions/${id}/`, data, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -41,34 +41,34 @@ export const tourismApi = {
   },
 
   deleteAttraction: async (id) => {
-    await apiClient.delete(`/api/tourism/attractions/${id}/`);
+    await apiClient.delete(`/tourism/attractions/${id}/`);
   },
 
   // イベント
   getEvents: async (params = {}) => {
-    const response = await apiClient.get('/api/tourism/events/', { params });
+    const response = await apiClient.get('/tourism/events/', { params });
     return response.data;
   },
 
   getEventById: async (id) => {
-    const response = await apiClient.get(`/api/tourism/events/${id}/`);
+    const response = await apiClient.get(`/tourism/events/${id}/`);
     return response.data;
   },
 
   getUpcomingEvents: async () => {
-    const response = await apiClient.get('/api/tourism/events/upcoming/');
+    const response = await apiClient.get('/tourism/events/upcoming/');
     return response.data;
   },
 
   getEventsByDateRange: async (startDate, endDate) => {
-    const response = await apiClient.get('/api/tourism/events/by_date_range/', {
+    const response = await apiClient.get('/tourism/events/by_date_range/', {
       params: { start: startDate, end: endDate }
     });
     return response.data;
   },
 
   createEvent: async (data) => {
-    const response = await apiClient.post('/api/tourism/events/', data, {
+    const response = await apiClient.post('/tourism/events/', data, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -77,7 +77,7 @@ export const tourismApi = {
   },
 
   updateEvent: async (id, data) => {
-    const response = await apiClient.patch(`/api/tourism/events/${id}/`, data, {
+    const response = await apiClient.patch(`/tourism/events/${id}/`, data, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -86,27 +86,27 @@ export const tourismApi = {
   },
 
   deleteEvent: async (id) => {
-    await apiClient.delete(`/api/tourism/events/${id}/`);
+    await apiClient.delete(`/tourism/events/${id}/`);
   },
 
   // 季節のおすすめ
   getSeasonalRecommendations: async (params = {}) => {
-    const response = await apiClient.get('/api/tourism/seasonal/', { params });
+    const response = await apiClient.get('/tourism/seasonal/', { params });
     return response.data;
   },
 
   getSeasonalRecommendationById: async (id) => {
-    const response = await apiClient.get(`/api/tourism/seasonal/${id}/`);
+    const response = await apiClient.get(`/tourism/seasonal/${id}/`);
     return response.data;
   },
 
   getCurrentSeasonRecommendations: async () => {
-    const response = await apiClient.get('/api/tourism/seasonal/current_season/');
+    const response = await apiClient.get('/tourism/seasonal/current_season/');
     return response.data;
   },
 
   createSeasonalRecommendation: async (data) => {
-    const response = await apiClient.post('/api/tourism/seasonal/', data, {
+    const response = await apiClient.post('/tourism/seasonal/', data, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -115,7 +115,7 @@ export const tourismApi = {
   },
 
   updateSeasonalRecommendation: async (id, data) => {
-    const response = await apiClient.patch(`/api/tourism/seasonal/${id}/`, data, {
+    const response = await apiClient.patch(`/tourism/seasonal/${id}/`, data, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -124,7 +124,7 @@ export const tourismApi = {
   },
 
   deleteSeasonalRecommendation: async (id) => {
-    await apiClient.delete(`/api/tourism/seasonal/${id}/`);
+    await apiClient.delete(`/tourism/seasonal/${id}/`);
   },
 };
 
