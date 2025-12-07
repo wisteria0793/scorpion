@@ -4,14 +4,12 @@ import { Box, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import ListAltIcon from '@mui/icons-material/ListAlt';
 import BusinessIcon from '@mui/icons-material/Business';
-import ExploreIcon from '@mui/icons-material/Explore';
 import EditLocationIcon from '@mui/icons-material/EditLocation';
 
 import Header from '../components/Header';
 import RevenueAnalysis from '../components/RevenueAnalysis'; 
 import ReservationList from '../components/ReservationList';
 import PropertyManagement from '../components/PropertyManagement';
-import TourismPage from './TourismPage';
 import TourismManagement from '../components/TourismManagement';
 
 const drawerWidth = 240;
@@ -21,7 +19,6 @@ const SideMenu = ({ currentView, setView }) => {
     { text: '売上分析', view: 'revenue', icon: <DashboardIcon /> },
     { text: '月別予約一覧', view: 'reservations', icon: <ListAltIcon /> },
     { text: '施設管理', view: 'properties', icon: <BusinessIcon /> },
-    { text: '観光情報', view: 'tourism', icon: <ExploreIcon /> },
     { text: '観光情報管理', view: 'tourism-management', icon: <EditLocationIcon /> },
   ];
 
@@ -62,7 +59,6 @@ function AnalyticsPage() {
       case 'revenue': return <RevenueAnalysis />; 
       case 'reservations': return <ReservationList />;
       case 'properties': return <PropertyManagement />;
-      case 'tourism': return <TourismPage />;
       case 'tourism-management': return <TourismManagement />;
       default: return <div>コンテンツを選択してください</div>;
     }

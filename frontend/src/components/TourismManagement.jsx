@@ -195,10 +195,25 @@ function TourismManagement() {
     try {
       const submitData = new FormData();
       
-      // Add all form fields
+      // Validate required fields
+      const requiredFields = tabValue === 0 
+        ? ['name', 'category', 'description', 'address']
+        : tabValue === 1
+        ? ['name', 'event_type', 'description', 'venue', 'start_date', 'end_date']
+        : ['season', 'title', 'description'];
+      
+      const missingFields = requiredFields.filter(field => !formData[field]);
+      if (missingFields.length > 0) {
+        setError(`以下のフィールドは必須です: ${missingFields.join(', ')}`);
+        return;
+      }
+      
+      // Add all form fields (only non-empty values)
       Object.keys(formData).forEach(key => {
-        if (formData[key] !== null && formData[key] !== '') {
-          submitData.append(key, formData[key]);
+        const value = formData[key];
+        // Only append if value is truthy or is false for boolean fields
+        if (value !== null && value !== '' && value !== undefined) {
+          submitData.append(key, value);
         }
       });
       
