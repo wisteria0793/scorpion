@@ -127,10 +127,13 @@ class RevenueAPIView(APIView):
     def _format_for_stacked_chart(self, monthly_by_type, start_date, end_date):
         """管理形態ごとの月別クエリセットを、積み上げグラフ用の形式に整形する"""
         pivoted_data = defaultdict(lambda: defaultdict(int))
+        all_management_types = set()
+        
         for item in monthly_by_type:
             date_key = item['month'].strftime('%Y-%m')
             # management_type が None や空文字の場合は '不明' とする
             m_type = item["property__management_type"] or '不明'
+            all_management_types.add(m_type)
             pivoted_data[date_key][m_type] = item['total'] or 0
 
         result = []
@@ -139,8 +142,12 @@ class RevenueAPIView(APIView):
             date_key = current_date.strftime('%Y-%m')
             month_data = {"date": date_key}
             details = pivoted_data.get(date_key, {})
+            
+            # すべての管理形態キーを含める（存在しない場合は0を設定）
+            for m_type in all_management_types:
+                month_data[m_type] = details.get(m_type, 0)
+            
             total = sum(details.values())
-            month_data.update(details)
             month_data['total'] = total
             result.append(month_data)
 
@@ -251,7 +258,7 @@ class NationalityRatioAPIView(APIView):
         ).select_related('reservation__property')
 
         if property_name:
-            submissions = submissions.filter(reservation__property__management_type=property_name)
+            submissions = submissions.filter(reservation__property__name=property_name)
 
         nationality_counts = defaultdict(int)
         for submission in submissions:
