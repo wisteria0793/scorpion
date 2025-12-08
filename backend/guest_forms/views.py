@@ -7,8 +7,8 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.permissions import AllowAny
 from rest_framework.permissions import AllowAny
 
-from .models import Property, FacilityImage, GuestSubmission, FormTemplate
-from .serializers import PropertySerializer, FacilityImageSerializer, FormTemplateSerializer, GuestSubmissionSerializer
+from .models import Property, FacilityImage, GuestSubmission, FormTemplate, PricingRule
+from .serializers import PropertySerializer, FacilityImageSerializer, FormTemplateSerializer, GuestSubmissionSerializer, PricingRuleSerializer
 
 class PropertyViewSet(viewsets.ModelViewSet):
     """
