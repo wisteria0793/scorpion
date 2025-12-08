@@ -145,6 +145,7 @@ function PropertyManagement() {
                             <TableCell>住所</TableCell>
                             <TableCell>最大収容人数</TableCell>
                             <TableCell>管理形態</TableCell>
+                            <TableCell>Room ID</TableCell>
                             <TableCell align="right">操作</TableCell>
                         </TableRow>
                     </TableHead>
@@ -155,6 +156,7 @@ function PropertyManagement() {
                                 <TableCell>{prop.address}</TableCell>
                                 <TableCell>{prop.capacity}</TableCell>
                                 <TableCell>{prop.management_type}</TableCell>
+                                <TableCell>{prop.room_id || '-'}</TableCell>
                                 <TableCell align="right">
                                     <IconButton size="small" onClick={() => navigate(`/property/${prop.id}/edit`)}><EditIcon /></IconButton>
                                     <IconButton size="small" onClick={() => handleManageImages(prop)}><PhotoLibraryIcon /></IconButton>

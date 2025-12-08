@@ -37,7 +37,7 @@ function PropertyFormPage() {
                 });
         } else {
             setFormData({
-                name: '', slug: '', beds24_property_key: '', management_type: '',
+                name: '', slug: '', beds24_property_key: '', room_id: '', management_type: '',
                 address: '', capacity: 0, num_parking: 0, google_map_url: '',
                 check_in_time: '15:00', check_out_time: '10:00', description: '',
                 wifi_info: '', house_rules: '', faq: []
@@ -72,6 +72,7 @@ function PropertyFormPage() {
             ...formData,
             capacity: Number(formData.capacity) || 0,
             num_parking: Number(formData.num_parking) || 0,
+            room_id: formData.room_id?.toString().trim() === '' ? null : Number(formData.room_id),
             beds24_property_key: formData.beds24_property_key?.trim() === '' ? null : formData.beds24_property_key,
         };
         try {
@@ -122,6 +123,8 @@ function PropertyFormPage() {
                     <AccordionDetails>
                         <Grid container spacing={2}>
                             <Grid item xs={12} sm={4}><TextField name="beds24_property_key" label="Beds24プロパティキー" value={formData.beds24_property_key} onChange={handleChange} fullWidth /></Grid>
+                            <Grid item xs={12} sm={4}><TextField name="room_id" label="Room ID" type="number" value={formData.room_id || ''} onChange={handleChange} fullWidth /></Grid>
+                            <Grid item xs={12} sm={4}><TextField name="management_type" label="管理形態" value={formData.management_type || ''} onChange={handleChange} fullWidth /></Grid>
                             <Grid item xs={12} sm={4}><TextField name="check_in_time" label="チェックイン時刻" type="time" value={formData.check_in_time} onChange={handleChange} fullWidth InputLabelProps={{ shrink: true }} /></Grid>
                             <Grid item xs={12} sm={4}><TextField name="check_out_time" label="チェックアウト時刻" type="time" value={formData.check_out_time} onChange={handleChange} fullWidth InputLabelProps={{ shrink: true }} /></Grid>
                             <Grid item xs={12}><TextField name="wifi_info" label="Wi-Fi情報" value={formData.wifi_info} onChange={handleChange} fullWidth multiline rows={4} /></Grid>

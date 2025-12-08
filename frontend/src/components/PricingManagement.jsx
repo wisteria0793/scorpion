@@ -39,6 +39,7 @@ import {
     exportPricingToCSV,
     importPricingFromCSV,
 } from '../services/pricingApi';
+import { fetchProperties } from '../services/revenueApi';
 
 // ============================================================================
 // 1. 基本設定パネル
@@ -248,7 +249,9 @@ const CalendarGridView = ({ currentMonth, currentYear, onDateClick, calendarData
 // ============================================================================
 // 3. メインコンポーネント
 // ============================================================================
-function PricingManagement({ property }) {
+function PricingManagement() {
+    const [properties, setProperties] = useState([]);
+    const [selectedProperty, setSelectedProperty] = useState(null);
     const [tabValue, setTabValue] = useState(0);
     const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
     const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
@@ -278,15 +281,35 @@ function PricingManagement({ property }) {
         month: 'long',
     });
 
+    // 施設一覧を取得
+    useEffect(() => {
+        const loadProperties = async () => {
+            try {
+                const data = await fetchProperties();
+                setProperties(data);
+                if (data.length > 0) {
+                    setSelectedProperty(data[0]);
+                }
+            } catch (error) {
+                showSnackbar('施設一覧の読み込みに失敗しました', 'error');
+            }
+        };
+        loadProperties();
+    }, []);
+
     // カレンダーデータを取得
     useEffect(() => {
-        loadMonthlyData();
-    }, [currentMonth, currentYear]);
+        if (selectedProperty) {
+            loadMonthlyData();
+        }
+    }, [currentMonth, currentYear, selectedProperty]);
 
     const loadMonthlyData = async () => {
+        if (!selectedProperty) return;
+        
         setLoading(true);
         try {
-            const data = await fetchMonthlyPricing(property.id, currentYear, currentMonth + 1);
+            const data = await fetchMonthlyPricing(selectedProperty.id, currentYear, currentMonth + 1);
             setCalendarData(data.calendarData);
             setBasicSettings(data.basicSettings);
         } catch (error) {
@@ -326,7 +349,7 @@ function PricingManagement({ property }) {
     };
 
     const handleSaveDateSettings = async () => {
-        if (!selectedDate) return;
+        if (!selectedDate || !selectedProperty) return;
 
         const dateKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(selectedDate).padStart(2, '0')}`;
         const updates = [{
@@ -338,7 +361,7 @@ function PricingManagement({ property }) {
         }];
 
         try {
-            await updateMonthlyPricing(property.id, currentYear, currentMonth + 1, updates);
+            await updateMonthlyPricing(selectedProperty.id, currentYear, currentMonth + 1, updates);
             
             // ローカルステートを更新
             setCalendarData(prev => {
@@ -360,9 +383,11 @@ function PricingManagement({ property }) {
     };
 
     const handleBeds24Sync = async () => {
+        if (!selectedProperty) return;
+        
         setSyncing(true);
         try {
-            await syncWithBeds24(property.id, syncType);
+            await syncWithBeds24(selectedProperty.id, syncType);
             await loadMonthlyData(); // データを再読み込み
             showSnackbar('Beds24と同期しました', 'success');
         } catch (error) {
@@ -373,18 +398,20 @@ function PricingManagement({ property }) {
     };
 
     const handleCSVExport = () => {
+        if (!selectedProperty) return;
+        
         const startDate = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-01`;
         const lastDay = new Date(currentYear, currentMonth + 1, 0).getDate();
         const endDate = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${lastDay}`;
-        exportPricingToCSV(property.id, startDate, endDate);
+        exportPricingToCSV(selectedProperty.id, startDate, endDate);
     };
 
     const handleCSVImport = async (event) => {
         const file = event.target.files?.[0];
-        if (!file) return;
+        if (!file || !selectedProperty) return;
 
         try {
-            await importPricingFromCSV(property.id, file);
+            await importPricingFromCSV(selectedProperty.id, file);
             await loadMonthlyData();
             showSnackbar('CSVをインポートしました', 'success');
         } catch (error) {
@@ -400,13 +427,36 @@ function PricingManagement({ property }) {
         return <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}><CircularProgress /></Box>;
     }
 
+    if (!selectedProperty) {
+        return <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>施設を読み込み中...</Box>;
+    }
+
     return (
         <Box>
             {/* ヘッダー */}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                <Typography variant="h4" component="h1">
-                    施設価格設定 - {property.name}
-                </Typography>
+                <Box>
+                    <Typography variant="h4" component="h1">
+                        施設価格設定
+                    </Typography>
+                    <FormControl sx={{ minWidth: 300, mt: 2 }}>
+                        <InputLabel>施設を選択</InputLabel>
+                        <Select
+                            value={selectedProperty.id}
+                            label="施設を選択"
+                            onChange={(e) => {
+                                const property = properties.find(p => p.id === e.target.value);
+                                setSelectedProperty(property);
+                            }}
+                        >
+                            {properties.map(property => (
+                                <MenuItem key={property.id} value={property.id}>
+                                    {property.name}
+                                </MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
+                </Box>
                 <Stack direction="row" spacing={1}>
                     <Tooltip title="CSVエクスポート">
                         <Button variant="outlined" size="small" startIcon={<GetAppIcon />} onClick={handleCSVExport}>
@@ -427,10 +477,10 @@ function PricingManagement({ property }) {
 
             {/* タブ1: 基本設定 */}
             {tabValue === 0 && (
-                <Grid container spacing={3}>
+                <Grid item xs={12} md={6}>
                     <Grid item xs={12} md={6}>
                         <BasicSettingsPanel 
-                            property={property} 
+                            property={selectedProperty} 
                             basicSettings={basicSettings}
                             loading={loading} 
                         />
