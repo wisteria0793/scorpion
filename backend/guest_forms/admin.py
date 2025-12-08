@@ -1,7 +1,7 @@
 # backend/guest_forms/admin.py
 
 from django.contrib import admin
-from .models import Property, FormTemplate, FormField, GuestSubmission, Amenity, FacilityImage
+from .models import Property, FormTemplate, FormField, GuestSubmission, Amenity, FacilityImage, PricingRule
 
 class FormFieldInline(admin.TabularInline):
     model = FormField
@@ -40,6 +40,14 @@ class GuestSubmissionAdmin(admin.ModelAdmin):
 class AmenityAdmin(admin.ModelAdmin):
     list_display = ('name',)
     search_fields = ('name',)
+
+@admin.register(PricingRule)
+class PricingRuleAdmin(admin.ModelAdmin):
+    list_display = ('property', 'date', 'price', 'min_nights', 'is_blackout')
+    list_filter = ('property', 'is_blackout', 'date')
+    search_fields = ('property__name', 'blackout_reason')
+    date_hierarchy = 'date'
+    ordering = ('-date',)
 
 # FormFieldはFormTemplateのインラインで管理するため、単独での登録は不要
 # admin.site.register(FormField)
