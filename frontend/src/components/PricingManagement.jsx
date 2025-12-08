@@ -45,12 +45,26 @@ import { fetchProperties } from '../services/revenueApi';
 // 1. 基本設定パネル
 // ============================================================================
 const BasicSettingsPanel = ({ property, basicSettings, onSettingsSaved, loading }) => {
-    const [settings, setSettings] = useState(basicSettings);
+    const [settings, setSettings] = useState({
+        basePrice: 0,
+        baseGuests: 1,
+        adultExtraPrice: 0,
+        childExtraPrice: 0,
+        minNights: 1,
+    });
     const [editDialogOpen, setEditDialogOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
-        setSettings(basicSettings);
+        if (basicSettings && Object.keys(basicSettings).length > 0) {
+            setSettings({
+                basePrice: basicSettings.basePrice || 0,
+                baseGuests: basicSettings.baseGuests || 1,
+                adultExtraPrice: basicSettings.adultExtraPrice || 0,
+                childExtraPrice: basicSettings.childExtraPrice || 0,
+                minNights: basicSettings.minNights || 1,
+            });
+        }
     }, [basicSettings]);
 
     const handleSaveSettings = async () => {
@@ -482,7 +496,11 @@ function PricingManagement() {
                         <BasicSettingsPanel 
                             property={selectedProperty} 
                             basicSettings={basicSettings}
-                            loading={loading} 
+                            loading={loading}
+                            onSettingsSaved={(newSettings) => {
+                                setBasicSettings(newSettings);
+                                showSnackbar('基本設定を保存しました', 'success');
+                            }}
                         />
                     </Grid>
                     <Grid item xs={12} md={6}>
