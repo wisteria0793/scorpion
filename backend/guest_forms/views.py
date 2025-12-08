@@ -118,3 +118,168 @@ class GuestFormUpdateView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except GuestSubmission.DoesNotExist:
             return Response({"error": "無効なトークンです。"}, status=status.HTTP_404_NOT_FOUND)
+
+
+# ============================================================================
+# 価格設定管理 API
+# ============================================================================
+from django.utils import timezone
+from datetime import datetime, timedelta
+from rest_framework.decorators import api_view
+from rest_framework.viewsets import ViewSet
+
+class PropertyPricingViewSet(viewsets.ModelViewSet):
+    """
+    施設の価格設定を取得・更新するAPI
+    GET /api/properties/{property_pk}/pricing/
+    """
+    queryset = Property.objects.all()
+    serializer_class = PropertySerializer
+
+    def get_serializer(self, *args, **kwargs):
+        """基本設定のシリアライザー"""
+        return PropertySerializer(*args, **kwargs)
+
+    def get_basic_settings(self, property_id):
+        """基本設定を取得"""
+        try:
+            prop = Property.objects.get(id=property_id)
+            return {
+                'basePrice': prop.base_price,
+                'baseGuests': prop.base_guests,
+                'adultExtraPrice': prop.adult_extra_price,
+                'childExtraPrice': prop.child_extra_price,
+                'minNights': prop.min_nights,
+                'checkInTime': prop.check_in_time.isoformat() if prop.check_in_time else '15:00',
+                'checkOutTime': prop.check_out_time.isoformat() if prop.check_out_time else '10:00',
+            }
+        except Property.DoesNotExist:
+            return None
+
+    def update_basic_settings(self, property_id, settings_data):
+        """基本設定を更新"""
+        try:
+            prop = Property.objects.get(id=property_id)
+            prop.base_price = settings_data.get('basePrice', prop.base_price)
+            prop.base_guests = settings_data.get('baseGuests', prop.base_guests)
+            prop.adult_extra_price = settings_data.get('adultExtraPrice', prop.adult_extra_price)
+            prop.child_extra_price = settings_data.get('childExtraPrice', prop.child_extra_price)
+            prop.min_nights = settings_data.get('minNights', prop.min_nights)
+            prop.save()
+            return True
+        except Property.DoesNotExist:
+            return False
+
+
+class PricingRuleViewSet(viewsets.ModelViewSet):
+    """
+    日別価格ルールの CRUD API
+    GET /api/pricing-rules/?property={property_id}&start_date=2026-03-01&end_date=2026-05-31
+    POST /api/pricing-rules/
+    PUT /api/pricing-rules/{id}/
+    DELETE /api/pricing-rules/{id}/
+    """
+    serializer_class = PricingRuleSerializer
+    permission_classes = [AllowAny]
+
+    def get_queryset(self):
+        queryset = PricingRule.objects.all()
+        
+        # フィルター: property_id
+        property_id = self.request.query_params.get('property')
+        if property_id:
+            queryset = queryset.filter(property_id=property_id)
+        
+        # フィルター: 日付範囲
+        start_date = self.request.query_params.get('start_date')
+        end_date = self.request.query_params.get('end_date')
+        if start_date:
+            queryset = queryset.filter(date__gte=start_date)
+        if end_date:
+            queryset = queryset.filter(date__lte=end_date)
+        
+        return queryset.order_by('date')
+
+
+@api_view(['GET', 'POST'])
+def pricing_month_view(request, property_id, year, month):
+    """
+    月別の価格データを取得・作成
+    GET /api/pricing/{property_id}/{year}/{month}/
+    POST /api/pricing/{property_id}/{year}/{month}/
+    """
+    from datetime import date, timedelta
+    
+    # 月の最初と最後の日を計算
+    start_date = date(int(year), int(month), 1)
+    if int(month) == 12:
+        end_date = date(int(year) + 1, 1, 1) - timedelta(days=1)
+    else:
+        end_date = date(int(year), int(month) + 1, 1) - timedelta(days=1)
+
+    try:
+        property_obj = Property.objects.get(id=property_id)
+    except Property.DoesNotExist:
+        return Response({'error': '施設が見つかりません'}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'GET':
+        # 月のデータを取得
+        rules = PricingRule.objects.filter(
+            property=property_obj,
+            date__range=(start_date, end_date)
+        ).order_by('date')
+        
+        # 基本設定も取得
+        basic_settings = {
+            'basePrice': property_obj.base_price,
+            'baseGuests': property_obj.base_guests,
+            'adultExtraPrice': property_obj.adult_extra_price,
+            'childExtraPrice': property_obj.child_extra_price,
+            'minNights': property_obj.min_nights,
+        }
+        
+        # 全日付分のデータを構築（存在しない日付は基本設定から計算）
+        calendar_data = []
+        current_date = start_date
+        while current_date <= end_date:
+            date_str = current_date.strftime('%Y-%m-%d')
+            rule = rules.filter(date=current_date).first()
+            
+            calendar_data.append({
+                'date': date_str,
+                'price': rule.price if rule and rule.price else property_obj.base_price,
+                'isBlackout': rule.is_blackout if rule else False,
+                'blackoutReason': rule.blackout_reason if rule else '',
+                'minNights': rule.min_nights if rule and rule.min_nights else property_obj.min_nights,
+            })
+            current_date += timedelta(days=1)
+        
+        return Response({
+            'basicSettings': basic_settings,
+            'calendarData': calendar_data,
+        })
+
+    elif request.method == 'POST':
+        # 複数の日付のデータを一括更新
+        data = request.data.get('updates', [])
+        
+        for update in data:
+            date_obj = datetime.strptime(update['date'], '%Y-%m-%d').date()
+            rule, _ = PricingRule.objects.get_or_create(
+                property=property_obj,
+                date=date_obj,
+            )
+            
+            if update.get('isBlackout'):
+                rule.is_blackout = True
+                rule.blackout_reason = update.get('blackoutReason', '')
+                rule.price = None
+            else:
+                rule.is_blackout = False
+                rule.blackout_reason = ''
+                rule.price = update.get('price')
+            
+            rule.min_nights = update.get('minNights')
+            rule.save()
+        
+        return Response({'status': 'ok'}, status=status.HTTP_201_CREATED)

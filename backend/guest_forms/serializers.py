@@ -1,7 +1,7 @@
 # backend/guest_forms/serializers.py
 
 from rest_framework import serializers
-from .models import FormField, FormTemplate, Property, FacilityImage, GuestSubmission
+from .models import FormField, FormTemplate, Property, FacilityImage, GuestSubmission, PricingRule
 
 class FacilityImageSerializer(serializers.ModelSerializer):
     class Meta:
@@ -54,3 +54,12 @@ class GuestSubmissionSerializer(serializers.ModelSerializer):
     class Meta:
         model = GuestSubmission
         fields = ['submitted_data']
+
+class PricingRuleSerializer(serializers.ModelSerializer):
+    """
+    日別の価格ルールをJSON化するためのシリアライザー
+    """
+    class Meta:
+        model = PricingRule
+        fields = ['id', 'property', 'date', 'price', 'min_nights', 'is_blackout', 'blackout_reason', 'created_by']
+        read_only_fields = ['id', 'created_at', 'updated_at']

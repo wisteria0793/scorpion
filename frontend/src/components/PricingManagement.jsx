@@ -1,54 +1,68 @@
 // src/components/PricingManagement.jsx
 /**
- * 施設の価格設定と在庫管理を行うコンポーネント
+ * 施設の価格設定と在庫管理を行うコンポーネント - ハイブリッド型
  * 
- * ハイブリッド型UI:
- * - 左側: 基本設定パネル（フォーム）
- * - 右側: 日別カレンダー（Interactive Grid）
+ * UI構成:
+ * - タブナビゲーション
+ *   1. 基本設定：フォーム形式の基本情報入力
+ *   2. カレンダー：日別の価格・ブラックアウト管理
+ *   3. インポート・同期：CSV操作とBeds24連携
  * 
- * 主な機能:
- * 1. 基本料金、基本人数、追加料金の管理
- * 2. 日別の価格設定（カレンダー表示）
- * 3. ブラックアウト日の設定
- * 4. CSVのインポート/エクスポート
- * 5. Beds24との同期
+ * 機能:
+ * - 基本料金、基本人数、追加料金の管理
+ * - 日別の価格設定（カレンダー表示）
+ * - ブラックアウト日の設定
+ * - CSVのインポート/エクスポート
+ * - Beds24との同期
  */
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Box, Paper, Tabs, Tab, TextField, Button, Dialog, DialogTitle, DialogContent,
-    DialogActions, Table, TableHead, TableBody, TableRow, TableCell, Chip,
-    Grid, Card, CardContent, Typography, Switch, FormControlLabel, Alert,
+    DialogActions, Grid, Card, CardContent, Typography, Switch, FormControlLabel, Alert,
     CircularProgress, Select, MenuItem, FormControl, InputLabel, Stack,
-    IconButton, Tooltip, Divider
+    IconButton, Tooltip, Divider, Snackbar
 } from '@mui/material';
+import MuiAlert from '@mui/material/Alert';
 import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
-import AddIcon from '@mui/icons-material/Add';
 import SyncIcon from '@mui/icons-material/Sync';
 import GetAppIcon from '@mui/icons-material/GetApp';
 import PublishIcon from '@mui/icons-material/Publish';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 
+import {
+    fetchMonthlyPricing,
+    updateMonthlyPricing,
+    updateBasicSettings,
+    syncWithBeds24,
+    exportPricingToCSV,
+    importPricingFromCSV,
+} from '../services/pricingApi';
+
 // ============================================================================
 // 1. 基本設定パネル
 // ============================================================================
-const BasicSettingsPanel = ({ property, onSave, loading }) => {
-    const [settings, setSettings] = useState({
-        basePrice: 10000,
-        baseGuests: 4,
-        adultExtraPrice: 3000,
-        childExtraPrice: 1500,
-        minNights: 1,
-        checkInTime: '15:00',
-        checkOutTime: '10:00',
-    });
+const BasicSettingsPanel = ({ property, basicSettings, onSettingsSaved, loading }) => {
+    const [settings, setSettings] = useState(basicSettings);
     const [editDialogOpen, setEditDialogOpen] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+
+    useEffect(() => {
+        setSettings(basicSettings);
+    }, [basicSettings]);
 
     const handleSaveSettings = async () => {
-        await onSave(settings);
-        setEditDialogOpen(false);
+        setIsSaving(true);
+        try {
+            await updateBasicSettings(property.id, settings);
+            setEditDialogOpen(false);
+            onSettingsSaved?.(settings);
+        } catch (error) {
+            console.error('Failed to save settings:', error);
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     return (
@@ -97,43 +111,48 @@ const BasicSettingsPanel = ({ property, onSave, loading }) => {
                             label="基本料金 (¥/泊)"
                             type="number"
                             value={settings.basePrice}
-                            onChange={(e) => setSettings({ ...settings, basePrice: parseInt(e.target.value) })}
+                            onChange={(e) => setSettings({ ...settings, basePrice: parseInt(e.target.value) || 0 })}
                             fullWidth
+                            inputProps={{ min: 0 }}
                         />
                         <TextField
                             label="基本人数"
                             type="number"
                             value={settings.baseGuests}
-                            onChange={(e) => setSettings({ ...settings, baseGuests: parseInt(e.target.value) })}
+                            onChange={(e) => setSettings({ ...settings, baseGuests: parseInt(e.target.value) || 1 })}
                             fullWidth
+                            inputProps={{ min: 1 }}
                         />
                         <TextField
                             label="追加大人料金 (¥/名)"
                             type="number"
                             value={settings.adultExtraPrice}
-                            onChange={(e) => setSettings({ ...settings, adultExtraPrice: parseInt(e.target.value) })}
+                            onChange={(e) => setSettings({ ...settings, adultExtraPrice: parseInt(e.target.value) || 0 })}
                             fullWidth
+                            inputProps={{ min: 0 }}
                         />
                         <TextField
                             label="追加子供料金 (¥/名)"
                             type="number"
                             value={settings.childExtraPrice}
-                            onChange={(e) => setSettings({ ...settings, childExtraPrice: parseInt(e.target.value) })}
+                            onChange={(e) => setSettings({ ...settings, childExtraPrice: parseInt(e.target.value) || 0 })}
                             fullWidth
+                            inputProps={{ min: 0 }}
                         />
                         <TextField
                             label="最小宿泊日数"
                             type="number"
                             value={settings.minNights}
-                            onChange={(e) => setSettings({ ...settings, minNights: parseInt(e.target.value) })}
+                            onChange={(e) => setSettings({ ...settings, minNights: parseInt(e.target.value) || 1 })}
                             fullWidth
+                            inputProps={{ min: 1 }}
                         />
                     </Stack>
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={() => setEditDialogOpen(false)}>キャンセル</Button>
-                    <Button onClick={handleSaveSettings} variant="contained" disabled={loading}>
-                        {loading ? <CircularProgress size={24} /> : '保存'}
+                    <Button onClick={handleSaveSettings} variant="contained" disabled={isSaving}>
+                        {isSaving ? <CircularProgress size={24} /> : '保存'}
                     </Button>
                 </DialogActions>
             </Dialog>
@@ -144,14 +163,13 @@ const BasicSettingsPanel = ({ property, onSave, loading }) => {
 // ============================================================================
 // 2. カレンダーグリッド表示
 // ============================================================================
-const CalendarGridView = ({ currentMonth, currentYear, onDateClick, pricingData }) => {
+const CalendarGridView = ({ currentMonth, currentYear, onDateClick, calendarData, basePrice }) => {
     const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
     const firstDayOfWeek = new Date(currentYear, currentMonth, 1).getDay();
-    const weeks = Math.ceil((daysInMonth + firstDayOfWeek) / 7);
 
     const getDayData = (day) => {
         const dateKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        return pricingData[dateKey] || { price: null, blackout: false };
+        return calendarData.find(d => d.date === dateKey) || { price: basePrice, isBlackout: false };
     };
 
     const dayLabels = ['日', '月', '火', '水', '木', '金', '土'];
@@ -162,7 +180,7 @@ const CalendarGridView = ({ currentMonth, currentYear, onDateClick, pricingData 
             <Grid container spacing={0.5} sx={{ mb: 1 }}>
                 {dayLabels.map((label) => (
                     <Grid item xs={12 / 7} key={label}>
-                        <Box sx={{ textAlign: 'center', fontWeight: 600, py: 1 }}>
+                        <Box sx={{ textAlign: 'center', fontWeight: 600, py: 1, fontSize: '0.875rem' }}>
                             {label}
                         </Box>
                     </Grid>
@@ -174,7 +192,7 @@ const CalendarGridView = ({ currentMonth, currentYear, onDateClick, pricingData 
                 {/* 前月の日付を埋める */}
                 {Array.from({ length: firstDayOfWeek }).map((_, i) => (
                     <Grid item xs={12 / 7} key={`empty-${i}`}>
-                        <Box sx={{ p: 1, minHeight: 80, opacity: 0.3 }} />
+                        <Box sx={{ p: 1, minHeight: 85, opacity: 0.2, bgcolor: '#f5f5f5' }} />
                     </Grid>
                 ))}
 
@@ -183,16 +201,18 @@ const CalendarGridView = ({ currentMonth, currentYear, onDateClick, pricingData 
                     const day = i + 1;
                     const dayData = getDayData(day);
                     const isToday = new Date().toDateString() === new Date(currentYear, currentMonth, day).toDateString();
+                    const price = dayData.price || basePrice;
+                    const formattedPrice = `¥${(price / 1000).toFixed(1)}K`;
 
                     return (
                         <Grid item xs={12 / 7} key={`day-${day}`}>
                             <Card
                                 sx={{
                                     p: 1,
-                                    minHeight: 80,
+                                    minHeight: 85,
                                     cursor: 'pointer',
                                     border: isToday ? '2px solid #ff7300' : '1px solid #ddd',
-                                    bgcolor: dayData.blackout ? '#ffebee' : isToday ? '#fff3e0' : '#fafafa',
+                                    bgcolor: dayData.isBlackout ? '#ffebee' : isToday ? '#fff3e0' : '#fafafa',
                                     transition: 'all 0.2s',
                                     '&:hover': {
                                         boxShadow: 3,
@@ -201,20 +221,19 @@ const CalendarGridView = ({ currentMonth, currentYear, onDateClick, pricingData 
                                 }}
                                 onClick={() => onDateClick(day)}
                             >
-                                <Typography variant="caption" sx={{ fontWeight: 600, display: 'block' }}>
+                                <Typography variant="caption" sx={{ fontWeight: 600, display: 'block', mb: 0.5 }}>
                                     {day}
                                 </Typography>
-                                {dayData.blackout ? (
-                                    <Typography variant="caption" sx={{ color: '#d32f2f', fontWeight: 600, mt: 0.5 }}>
-                                        🚫
-                                    </Typography>
-                                ) : dayData.price ? (
-                                    <Typography variant="caption" sx={{ color: '#1976d2', fontWeight: 600, mt: 0.5, display: 'block' }}>
-                                        ¥{(dayData.price / 1000).toFixed(0)}K
-                                    </Typography>
+                                {dayData.isBlackout ? (
+                                    <Box sx={{ textAlign: 'center', py: 1 }}>
+                                        <Typography variant="h6" sx={{ color: '#d32f2f' }}>🚫</Typography>
+                                    </Box>
                                 ) : (
-                                    <Typography variant="caption" sx={{ color: '#999', mt: 0.5, display: 'block' }}>
-                                        基本料金
+                                    <Typography 
+                                        variant="caption" 
+                                        sx={{ color: '#1976d2', fontWeight: 700, display: 'block' }}
+                                    >
+                                        {formattedPrice}
                                     </Typography>
                                 )}
                             </Card>
@@ -229,26 +248,53 @@ const CalendarGridView = ({ currentMonth, currentYear, onDateClick, pricingData 
 // ============================================================================
 // 3. メインコンポーネント
 // ============================================================================
-function PricingManagement({ propertyId }) {
+function PricingManagement({ property }) {
     const [tabValue, setTabValue] = useState(0);
     const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
     const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
     const [selectedDate, setSelectedDate] = useState(null);
     const [editDateDialogOpen, setEditDateDialogOpen] = useState(false);
-    const [pricingData, setPricingData] = useState({});
+    
+    const [calendarData, setCalendarData] = useState([]);
+    const [basicSettings, setBasicSettings] = useState({
+        basePrice: 10000,
+        baseGuests: 4,
+        adultExtraPrice: 3000,
+        childExtraPrice: 1500,
+        minNights: 1,
+    });
+    
     const [loading, setLoading] = useState(false);
-
-    // ローカルデータ（本来はAPIから取得）
-    const property = {
-        id: propertyId,
-        name: '〇〇〇ハウス',
-        beds24PropertyKey: 'XXXXX',
-    };
+    const [editingPrice, setEditingPrice] = useState('');
+    const [editingBlackout, setEditingBlackout] = useState(false);
+    const [editingReason, setEditingReason] = useState('');
+    
+    const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+    const [syncType, setSyncType] = useState('basic');
+    const [syncing, setSyncing] = useState(false);
 
     const monthName = new Date(currentYear, currentMonth).toLocaleDateString('ja-JP', {
         year: 'numeric',
         month: 'long',
     });
+
+    // カレンダーデータを取得
+    useEffect(() => {
+        loadMonthlyData();
+    }, [currentMonth, currentYear]);
+
+    const loadMonthlyData = async () => {
+        setLoading(true);
+        try {
+            const data = await fetchMonthlyPricing(property.id, currentYear, currentMonth + 1);
+            setCalendarData(data.calendarData);
+            setBasicSettings(data.basicSettings);
+        } catch (error) {
+            showSnackbar('データの読み込みに失敗しました', 'error');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const handlePrevMonth = () => {
         if (currentMonth === 0) {
@@ -269,17 +315,90 @@ function PricingManagement({ propertyId }) {
     };
 
     const handleDateClick = (day) => {
+        const dateKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const dayData = calendarData.find(d => d.date === dateKey);
+        
         setSelectedDate(day);
+        setEditingPrice(dayData?.price?.toString() || basicSettings.basePrice.toString());
+        setEditingBlackout(dayData?.isBlackout || false);
+        setEditingReason(dayData?.blackoutReason || '');
         setEditDateDialogOpen(true);
     };
 
-    const handleSaveBasicSettings = async (settings) => {
-        setLoading(true);
-        // API呼び出しをここに実装
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        console.log('基本設定を保存:', settings);
-        setLoading(false);
+    const handleSaveDateSettings = async () => {
+        if (!selectedDate) return;
+
+        const dateKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(selectedDate).padStart(2, '0')}`;
+        const updates = [{
+            date: dateKey,
+            price: editingBlackout ? null : parseInt(editingPrice),
+            isBlackout: editingBlackout,
+            blackoutReason: editingReason,
+            minNights: basicSettings.minNights,
+        }];
+
+        try {
+            await updateMonthlyPricing(property.id, currentYear, currentMonth + 1, updates);
+            
+            // ローカルステートを更新
+            setCalendarData(prev => {
+                const newData = [...prev];
+                const index = newData.findIndex(d => d.date === dateKey);
+                if (index >= 0) {
+                    newData[index] = updates[0];
+                } else {
+                    newData.push(updates[0]);
+                }
+                return newData.sort((a, b) => new Date(a.date) - new Date(b.date));
+            });
+
+            setEditDateDialogOpen(false);
+            showSnackbar('設定を保存しました', 'success');
+        } catch (error) {
+            showSnackbar('設定の保存に失敗しました', 'error');
+        }
     };
+
+    const handleBeds24Sync = async () => {
+        setSyncing(true);
+        try {
+            await syncWithBeds24(property.id, syncType);
+            await loadMonthlyData(); // データを再読み込み
+            showSnackbar('Beds24と同期しました', 'success');
+        } catch (error) {
+            showSnackbar('同期に失敗しました', 'error');
+        } finally {
+            setSyncing(false);
+        }
+    };
+
+    const handleCSVExport = () => {
+        const startDate = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-01`;
+        const lastDay = new Date(currentYear, currentMonth + 1, 0).getDate();
+        const endDate = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${lastDay}`;
+        exportPricingToCSV(property.id, startDate, endDate);
+    };
+
+    const handleCSVImport = async (event) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        try {
+            await importPricingFromCSV(property.id, file);
+            await loadMonthlyData();
+            showSnackbar('CSVをインポートしました', 'success');
+        } catch (error) {
+            showSnackbar('CSVのインポートに失敗しました', 'error');
+        }
+    };
+
+    const showSnackbar = (message, severity) => {
+        setSnackbar({ open: true, message, severity });
+    };
+
+    if (loading && calendarData.length === 0) {
+        return <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}><CircularProgress /></Box>;
+    }
 
     return (
         <Box>
@@ -289,13 +408,8 @@ function PricingManagement({ propertyId }) {
                     施設価格設定 - {property.name}
                 </Typography>
                 <Stack direction="row" spacing={1}>
-                    <Tooltip title="Beds24と同期">
-                        <Button variant="outlined" startIcon={<SyncIcon />}>
-                            同期
-                        </Button>
-                    </Tooltip>
                     <Tooltip title="CSVエクスポート">
-                        <Button variant="outlined" startIcon={<GetAppIcon />}>
+                        <Button variant="outlined" size="small" startIcon={<GetAppIcon />} onClick={handleCSVExport}>
                             エクスポート
                         </Button>
                     </Tooltip>
@@ -315,22 +429,27 @@ function PricingManagement({ propertyId }) {
             {tabValue === 0 && (
                 <Grid container spacing={3}>
                     <Grid item xs={12} md={6}>
-                        <BasicSettingsPanel property={property} onSave={handleSaveBasicSettings} loading={loading} />
+                        <BasicSettingsPanel 
+                            property={property} 
+                            basicSettings={basicSettings}
+                            loading={loading} 
+                        />
                     </Grid>
                     <Grid item xs={12} md={6}>
                         <Paper sx={{ p: 3 }}>
                             <Typography variant="h6" gutterBottom>
-                                設定ガイド
+                                料金計算の仕組み
                             </Typography>
                             <Typography variant="body2" color="textSecondary" paragraph>
-                                基本料金は、基本人数（例：4名）での1泊分の価格です。
-                                基本人数を超える場合、追加大人料金または追加子供料金が加算されます。
+                                基本料金は、基本人数での1泊分の価格です。基本人数を超える場合、追加大人料金または追加子供料金が加算されます。
                             </Typography>
-                            <Typography variant="body2" color="textSecondary" paragraph>
+                            <Divider sx={{ my: 2 }} />
+                            <Typography variant="subtitle2" gutterBottom>
                                 例：基本料金¥10,000（4名）、追加大人料金¥3,000
                             </Typography>
-                            <Typography variant="body2" color="textSecondary">
-                                5名の予約 → ¥10,000 + ¥3,000 = ¥13,000
+                            <Typography variant="body2" sx={{ fontFamily: 'monospace', p: 1, bgcolor: '#f5f5f5', borderRadius: 1 }}>
+                                5名の予約 → ¥10,000 + ¥3,000 = ¥13,000<br />
+                                6名の予約 → ¥10,000 + ¥3,000 × 2 = ¥16,000
                             </Typography>
                         </Paper>
                     </Grid>
@@ -345,19 +464,27 @@ function PricingManagement({ propertyId }) {
                         <IconButton onClick={handlePrevMonth} size="small">
                             <ChevronLeftIcon />
                         </IconButton>
-                        <Typography variant="h6">{monthName}</Typography>
+                        <Typography variant="h6" sx={{ minWidth: 150, textAlign: 'center' }}>
+                            {monthName}
+                        </Typography>
                         <IconButton onClick={handleNextMonth} size="small">
                             <ChevronRightIcon />
                         </IconButton>
                     </Box>
 
-                    {/* カレンダーグリッド */}
-                    <CalendarGridView
-                        currentMonth={currentMonth}
-                        currentYear={currentYear}
-                        onDateClick={handleDateClick}
-                        pricingData={pricingData}
-                    />
+                    {loading ? (
+                        <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+                            <CircularProgress />
+                        </Box>
+                    ) : (
+                        <CalendarGridView
+                            currentMonth={currentMonth}
+                            currentYear={currentYear}
+                            onDateClick={handleDateClick}
+                            calendarData={calendarData}
+                            basePrice={basicSettings.basePrice}
+                        />
+                    )}
 
                     {/* 日付編集ダイアログ */}
                     {selectedDate && (
@@ -368,32 +495,44 @@ function PricingManagement({ propertyId }) {
                             <DialogContent sx={{ pt: 2 }}>
                                 <Stack spacing={2}>
                                     <FormControlLabel
-                                        control={<Switch defaultChecked />}
-                                        label="カスタム価格を設定"
-                                    />
-                                    <TextField
-                                        label="価格 (¥/泊)"
-                                        type="number"
-                                        defaultValue="10000"
-                                        fullWidth
-                                    />
-                                    <Divider />
-                                    <FormControlLabel
-                                        control={<Switch />}
+                                        control={
+                                            <Switch
+                                                checked={editingBlackout}
+                                                onChange={(e) => setEditingBlackout(e.target.checked)}
+                                            />
+                                        }
                                         label="この日をブラックアウト（予約不可）"
                                     />
-                                    <TextField
-                                        label="理由（オプション）"
-                                        multiline
-                                        rows={2}
-                                        fullWidth
-                                        placeholder="例：メンテナンス中"
-                                    />
+                                    
+                                    {!editingBlackout && (
+                                        <TextField
+                                            label="価格 (¥/泊)"
+                                            type="number"
+                                            value={editingPrice}
+                                            onChange={(e) => setEditingPrice(e.target.value)}
+                                            fullWidth
+                                            inputProps={{ min: 0 }}
+                                        />
+                                    )}
+                                    
+                                    {editingBlackout && (
+                                        <TextField
+                                            label="ブラックアウト理由（オプション）"
+                                            value={editingReason}
+                                            onChange={(e) => setEditingReason(e.target.value)}
+                                            fullWidth
+                                            multiline
+                                            rows={2}
+                                            placeholder="例：メンテナンス中"
+                                        />
+                                    )}
                                 </Stack>
                             </DialogContent>
                             <DialogActions>
                                 <Button onClick={() => setEditDateDialogOpen(false)}>キャンセル</Button>
-                                <Button variant="contained">保存</Button>
+                                <Button variant="contained" onClick={handleSaveDateSettings}>
+                                    保存
+                                </Button>
                             </DialogActions>
                         </Dialog>
                     )}
@@ -419,7 +558,12 @@ function PricingManagement({ propertyId }) {
                                 fullWidth
                             >
                                 ファイルを選択
-                                <input type="file" accept=".csv" hidden />
+                                <input 
+                                    type="file" 
+                                    accept=".csv" 
+                                    hidden 
+                                    onChange={handleCSVImport}
+                                />
                             </Button>
                         </Paper>
                     </Grid>
@@ -435,7 +579,11 @@ function PricingManagement({ propertyId }) {
                             </Alert>
                             <FormControl fullWidth sx={{ mb: 2 }}>
                                 <InputLabel>同期範囲</InputLabel>
-                                <Select defaultValue="basic">
+                                <Select 
+                                    value={syncType}
+                                    label="同期範囲"
+                                    onChange={(e) => setSyncType(e.target.value)}
+                                >
                                     <MenuItem value="basic">基本設定のみ</MenuItem>
                                     <MenuItem value="calendar">基本設定 + 日別価格</MenuItem>
                                     <MenuItem value="all">全て（上書き）</MenuItem>
@@ -445,16 +593,26 @@ function PricingManagement({ propertyId }) {
                                 variant="contained"
                                 fullWidth
                                 startIcon={<SyncIcon />}
+                                onClick={handleBeds24Sync}
+                                disabled={syncing}
                             >
-                                同期開始
+                                {syncing ? <CircularProgress size={24} /> : '同期開始'}
                             </Button>
-                            <Typography variant="caption" sx={{ display: 'block', mt: 2, color: '#999' }}>
-                                最後の同期: 2026-03-08 14:30
-                            </Typography>
                         </Paper>
                     </Grid>
                 </Grid>
             )}
+
+            {/* スナックバー */}
+            <Snackbar
+                open={snackbar.open}
+                autoHideDuration={4000}
+                onClose={() => setSnackbar({ ...snackbar, open: false })}
+            >
+                <MuiAlert severity={snackbar.severity} sx={{ width: '100%' }}>
+                    {snackbar.message}
+                </MuiAlert>
+            </Snackbar>
         </Box>
     );
 }

@@ -71,6 +71,13 @@ class Property(models.Model):
     management_type = models.CharField(max_length=50, null=True, blank=True, verbose_name="管理形態")
     amenities = models.ManyToManyField(Amenity, related_name='properties', blank=True, verbose_name="アメニティ")
 
+    # 価格設定関連
+    base_price = models.IntegerField(default=10000, verbose_name="基本料金（¥/泊）")
+    base_guests = models.IntegerField(default=4, verbose_name="基本人数")
+    adult_extra_price = models.IntegerField(default=3000, verbose_name="追加大人料金（¥/名）")
+    child_extra_price = models.IntegerField(default=1500, verbose_name="追加子供料金（¥/名）")
+    min_nights = models.IntegerField(default=1, verbose_name="最小宿泊日数")
+
     # Check-in information for guests
     wifi_info = models.TextField(blank=True, verbose_name="Wi-Fi情報")
     house_rules = models.TextField(blank=True, verbose_name="ハウスルール")
@@ -113,6 +120,37 @@ class GuestSubmission(models.Model):
     submitted_data = models.JSONField(null=True, blank=True, verbose_name="提出データ")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="作成日時")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="更新日時")
+
+class PricingRule(models.Model):
+    """
+    施設ごとの日別価格・在庫管理ルール
+    """
+    property = models.ForeignKey(Property, on_delete=models.CASCADE, related_name='pricing_rules', verbose_name="施設")
+    date = models.DateField(verbose_name="日付", db_index=True)
+    
+    # 価格設定
+    price = models.IntegerField(null=True, blank=True, verbose_name="カスタム価格（¥/泊）")
+    min_nights = models.IntegerField(null=True, blank=True, verbose_name="この日の最小宿泊日数")
+    
+    # 在庫管理
+    is_blackout = models.BooleanField(default=False, verbose_name="ブラックアウト（予約不可）")
+    blackout_reason = models.CharField(max_length=255, blank=True, verbose_name="ブラックアウト理由")
+    
+    # メタ情報
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="作成日時")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="更新日時")
+    created_by = models.CharField(max_length=50, blank=True, verbose_name="作成者（'beds24'など）")
+    
+    class Meta:
+        verbose_name = "価格ルール"
+        verbose_name_plural = "価格ルール"
+        unique_together = ('property', 'date')
+        indexes = [
+            models.Index(fields=['property', 'date']),
+        ]
+    
+    def __str__(self):
+        return f"{self.property.name} - {self.date}"
 
     class Meta:
         verbose_name = "名簿提出内容"
