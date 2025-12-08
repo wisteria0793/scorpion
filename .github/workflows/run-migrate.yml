@@ -1,6 +1,11 @@
 name: Run Database Migration
 
 on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'backend/**/migrations/*.py'
+      - 'backend/**/models.py'
   workflow_dispatch:
 
 jobs:
