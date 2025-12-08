@@ -283,3 +283,41 @@ def pricing_month_view(request, property_id, year, month):
             rule.save()
         
         return Response({'status': 'ok'}, status=status.HTTP_201_CREATED)
+
+
+class Beds24SyncAPIView(APIView):
+    """
+    POST /api/pricing/{property_id}/sync-beds24/
+    Beds24と価格設定を同期
+    """
+    def post(self, request, property_id):
+        try:
+            property_obj = Property.objects.get(id=property_id)
+        except Property.DoesNotExist:
+            return Response(
+                {'error': '施設が見つかりません'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        sync_type = request.data.get('sync_type', 'basic')
+        
+        # Beds24 APIへのリクエスト（今後実装）
+        # 現在はダミーレスポンスを返す
+        
+        response_data = {
+            'status': 'synced',
+            'sync_type': sync_type,
+            'property_id': property_id,
+            'property_name': property_obj.name,
+            'message': f'{sync_type} sync completed',
+        }
+        
+        if sync_type == 'basic':
+            response_data['synced_fields'] = ['basePrice', 'baseGuests', 'adultExtraPrice', 'childExtraPrice', 'minNights']
+        elif sync_type == 'calendar':
+            response_data['synced_fields'] = ['basic_settings', 'calendar_data']
+        elif sync_type == 'all':
+            response_data['synced_fields'] = ['all']
+        
+        return Response(response_data, status=status.HTTP_200_OK)
+
