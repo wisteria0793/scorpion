@@ -5,12 +5,14 @@ import DashboardIcon from '@mui/icons-material/Dashboard';
 import ListAltIcon from '@mui/icons-material/ListAlt';
 import BusinessIcon from '@mui/icons-material/Business';
 import EditLocationIcon from '@mui/icons-material/EditLocation';
+import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 
 import Header from '../components/Header';
 import RevenueAnalysis from '../components/RevenueAnalysis'; 
 import ReservationList from '../components/ReservationList';
 import PropertyManagement from '../components/PropertyManagement';
 import TourismManagement from '../components/TourismManagement';
+import PricingManagement from '../components/PricingManagement';
 
 const drawerWidth = 240;
 
@@ -20,6 +22,7 @@ const SideMenu = ({ currentView, setView }) => {
     { text: '月別予約一覧', view: 'reservations', icon: <ListAltIcon /> },
     { text: '施設管理', view: 'properties', icon: <BusinessIcon /> },
     { text: '観光情報管理', view: 'tourism-management', icon: <EditLocationIcon /> },
+    { text: '価格管理', view: 'pricing', icon: <AttachMoneyIcon /> },
   ];
 
   return (
@@ -60,6 +63,7 @@ function AnalyticsPage() {
       case 'reservations': return <ReservationList />;
       case 'properties': return <PropertyManagement />;
       case 'tourism-management': return <TourismManagement />;
+      case 'pricing': return <PricingManagement />;
       default: return <div>コンテンツを選択してください</div>;
     }
   };
