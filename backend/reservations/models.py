@@ -54,3 +54,97 @@ class SyncStatus(models.Model):
     class Meta:
         verbose_name = "同期ステータス"
         verbose_name_plural = "同期ステータス"
+
+
+class AccommodationTax(models.Model):
+    """
+    宿泊税支払い状況の管理モデル
+    2026年4月から北海道函館市で宿泊税が導入される
+    """
+    class PaymentStatus(models.TextChoices):
+        PENDING = 'pending', '未払い'
+        PAID = 'paid', '支払済'
+        EXEMPTED = 'exempted', '免除'
+        DEFERRED = 'deferred', '延期'
+
+    class TaxType(models.TextChoices):
+        ACCOMMODATION = 'accommodation', '宿泊税'
+        PREFECTURAL = 'prefectural', '道税'
+
+    # 予約情報との関連付け
+    reservation = models.OneToOneField(
+        Reservation,
+        on_delete=models.CASCADE,
+        related_name='accommodation_tax',
+        verbose_name="予約"
+    )
+    
+    # 宿泊税情報
+    tax_type = models.CharField(
+        max_length=20,
+        choices=TaxType.choices,
+        default=TaxType.ACCOMMODATION,
+        verbose_name="税種"
+    )
+    
+    # 税額計算（宿泊日数 × 税率）
+    num_nights = models.IntegerField(default=1, verbose_name="宿泊日数")
+    tax_rate = models.IntegerField(default=100, verbose_name="税率（¥/泊）")
+    tax_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0.00,
+        verbose_name="納税額（¥）"
+    )
+    
+    # 支払い状況
+    payment_status = models.CharField(
+        max_length=20,
+        choices=PaymentStatus.choices,
+        default=PaymentStatus.PENDING,
+        verbose_name="支払い状況"
+    )
+    
+    # 支払い方法
+    payment_method = models.CharField(
+        max_length=50,
+        null=True,
+        blank=True,
+        choices=[
+            ('cash', '現金'),
+            ('card', 'クレジットカード'),
+            ('stripe', 'Stripe'),
+            ('bank_transfer', '銀行振込'),
+            ('other', 'その他'),
+        ],
+        verbose_name="支払い方法"
+    )
+    
+    # タイムスタンプ
+    payment_date = models.DateField(null=True, blank=True, verbose_name="支払日")
+    payment_reference = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True,
+        verbose_name="支払い参照番号（Stripe Transaction ID等）"
+    )
+    notes = models.TextField(blank=True, verbose_name="備考")
+    
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="作成日時")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="更新日時")
+
+    class Meta:
+        verbose_name = "宿泊税"
+        verbose_name_plural = "宿泊税"
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.reservation.property.name} - {self.reservation.check_in_date} ({self.tax_amount}¥)"
+
+    def calculate_tax(self):
+        """宿泊税を計算"""
+        if self.reservation:
+            nights = (self.reservation.check_out_date - self.reservation.check_in_date).days
+            self.num_nights = max(1, nights)
+            self.tax_amount = self.num_nights * self.tax_rate
+        return self.tax_amount

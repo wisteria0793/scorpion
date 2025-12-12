@@ -4,6 +4,9 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.viewsets import ModelViewSet
+from rest_framework.filters import OrderingFilter
+from django_filters.rest_framework import DjangoFilterBackend
 from datetime import datetime, date, timedelta
 from collections import defaultdict
 import calendar
@@ -11,9 +14,9 @@ import calendar
 from django.db.models import Sum, Count
 from django.db.models.functions import TruncMonth, Extract
 
-from .models import Reservation, SyncStatus
+from .models import Reservation, SyncStatus, AccommodationTax
 from guest_forms.models import GuestSubmission, Property, FormTemplate
-from .serializers import SyncStatusSerializer, ReservationSerializer, DebugReservationSerializer
+from .serializers import SyncStatusSerializer, ReservationSerializer, DebugReservationSerializer, AccommodationTaxSerializer
 
 
 class ReservationLookupView(APIView):
@@ -419,3 +422,46 @@ class DebugReservationListView(APIView):
         queryset = Reservation.objects.order_by('-updated_at')[:100]
         serializer = DebugReservationSerializer(queryset, many=True)
         return Response(serializer.data)
+
+
+class AccommodationTaxViewSet(ModelViewSet):
+    """
+    宿泊税管理API
+    /api/accommodation-taxes/ - List, Create, Retrieve, Update, Destroy
+    
+    フィルタリング:
+    - ?payment_status=pending
+    - ?reservation__property__id=1
+    
+    ソート:
+    - ?ordering=created_at
+    - ?ordering=-tax_amount
+    """
+    queryset = AccommodationTax.objects.all().select_related(
+        'reservation',
+        'reservation__property'
+    )
+    serializer_class = AccommodationTaxSerializer
+    filter_backends = [DjangoFilterBackend, OrderingFilter]
+    filterset_fields = ['payment_status', 'tax_type', 'reservation__property__id']
+    ordering_fields = ['created_at', 'updated_at', 'tax_amount', 'payment_date']
+    ordering = ['-created_at']
+    
+    def perform_create(self, serializer):
+        """
+        宿泊税レコード作成時に税額を自動計算
+        """
+        instance = serializer.save()
+        if instance.tax_rate and instance.reservation:
+            instance.calculate_tax()
+            instance.save()
+    
+    def perform_update(self, serializer):
+        """
+        更新時に必要に応じて税額を再計算
+        """
+        instance = serializer.save()
+        # tax_rateが変更された場合は再計算
+        if instance.tax_rate and instance.reservation:
+            instance.calculate_tax()
+            instance.save()

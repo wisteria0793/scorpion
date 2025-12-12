@@ -70,6 +70,21 @@
   - **リクエストボディ:** `{ "check_in_date": "2026-05-10" }`
   - **レスポンス (成功):** `{ "token": "..." }`
 
+### 宿泊税 (Accommodation Tax)
+- **エンドポイント:** `/api/accommodation-taxes/`
+- **説明:** DRFの`ModelViewSet`を利用した宿泊税管理API。2026年4月より開始される宿泊税の支払い状況を追跡・管理します。
+  - `GET /api/accommodation-taxes/`: 全ての宿泊税レコードを取得。
+    - **フィルタ:** `?payment_status=pending` (未払い/支払済/免除/繰越), `?tax_type=accommodation` (宿泊税/都道府県税), `?reservation__property__id=1`
+    - **ソート:** `?ordering=created_at`, `?ordering=-tax_amount`
+    - **レスポンス:** `[{ "id": 1, "reservation": 1, "property_name": "ビラ桜", "check_in_date": "2026-05-10", "num_nights": 3, "tax_amount": "300.00", "payment_status": "pending", ... }]`
+  - `POST /api/accommodation-taxes/`: 新しい宿泊税レコードを作成。
+    - **リクエストボディ:** `{ "reservation": 1, "tax_type": "accommodation", "num_nights": 3, "tax_rate": 100, "payment_status": "pending", "payment_method": "cash", ... }`
+    - **自動計算:** `tax_amount = num_nights × tax_rate` は自動計算されます。
+  - `GET /api/accommodation-taxes/{id}/`: 特定の宿泊税レコードの詳細を取得。
+  - `PUT /api/accommodation-taxes/{id}/`: 特定の宿泊税レコードを更新。
+  - `PATCH /api/accommodation-taxes/{id}/`: 部分更新（例：支払い状況のみ更新）。
+  - `DELETE /api/accommodation-taxes/{id}/`: 特定の宿泊税レコードを削除。
+
 ### 宿泊者名簿 (`/api/guest-forms/`)
 - `GET /api/guest-forms/{token}/`
   - **説明:** 予約特定後に、表示すべきフォームの定義(質問リスト)を取得する。

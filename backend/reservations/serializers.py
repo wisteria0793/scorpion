@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import SyncStatus, Reservation
+from .models import SyncStatus, Reservation, AccommodationTax
 from guest_forms.models import GuestSubmission
 
 class SyncStatusSerializer(serializers.ModelSerializer):
@@ -73,3 +73,30 @@ class DebugReservationSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class AccommodationTaxSerializer(serializers.ModelSerializer):
+    reservation_guest_name = serializers.CharField(source='reservation.guest_name', read_only=True)
+    property_name = serializers.CharField(source='reservation.property.name', read_only=True)
+    check_in_date = serializers.DateField(source='reservation.check_in_date', read_only=True)
+    check_out_date = serializers.DateField(source='reservation.check_out_date', read_only=True)
+
+    class Meta:
+        model = AccommodationTax
+        fields = [
+            'id',
+            'reservation',
+            'property_name',
+            'reservation_guest_name',
+            'check_in_date',
+            'check_out_date',
+            'tax_type',
+            'num_nights',
+            'tax_rate',
+            'tax_amount',
+            'payment_status',
+            'payment_method',
+            'payment_date',
+            'payment_reference',
+            'notes',
+            'created_at',
+            'updated_at',
+        ]

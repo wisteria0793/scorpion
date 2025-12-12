@@ -1,7 +1,11 @@
 # reservations/urls.py
-from django.urls import path
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
 from . import views
 from guest_forms import views as guest_forms_views
+
+router = DefaultRouter()
+router.register(r'accommodation-taxes', views.AccommodationTaxViewSet, basename='accommodation-tax')
 
 urlpatterns = [
     path('check-in/<slug:facility_slug>/', views.ReservationLookupView.as_view(), name='reservation-lookup'),
@@ -15,4 +19,4 @@ urlpatterns = [
     path('reservations/monthly/', views.MonthlyReservationListView.as_view(), name='monthly-reservations-api'),
     path('sync-status/', views.LastSyncTimeView.as_view(), name='sync-status'),
     path('debug/reservations/', views.DebugReservationListView.as_view(), name='debug-reservations-api'),
-]
+] + router.urls
