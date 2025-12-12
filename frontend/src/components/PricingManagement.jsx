@@ -39,6 +39,7 @@ import {
     exportPricingToCSV,
     importPricingFromCSV,
 } from '../services/pricingApi';
+import { fetchDailyRates } from '../services/dailyRateApi';
 import { fetchProperties } from '../services/revenueApi';
 
 // ============================================================================
@@ -323,9 +324,33 @@ function PricingManagement() {
         
         setLoading(true);
         try {
-            const data = await fetchMonthlyPricing(selectedProperty.id, currentYear, currentMonth + 1);
-            setCalendarData(data.calendarData);
-            setBasicSettings(data.basicSettings);
+            // 既存の月次価格APIから基本設定は取得しつつ、日別料金は DailyRate API を優先
+            const [monthlyData] = await Promise.all([
+                fetchMonthlyPricing(selectedProperty.id, currentYear, currentMonth + 1),
+            ]);
+
+            setBasicSettings(monthlyData.basicSettings || basicSettings);
+
+            // 当月の開始・終了日を算出して DailyRate を取得
+            const firstDay = new Date(currentYear, currentMonth, 1);
+            const lastDay = new Date(currentYear, currentMonth + 1, 0);
+            const params = {
+                property_id: selectedProperty.id,
+                start_date: `${firstDay.getFullYear()}-${String(firstDay.getMonth() + 1).padStart(2, '0')}-${String(firstDay.getDate()).padStart(2, '0')}`,
+                end_date: `${lastDay.getFullYear()}-${String(lastDay.getMonth() + 1).padStart(2, '0')}-${String(lastDay.getDate()).padStart(2, '0')}`,
+            };
+
+            const dailyRates = await fetchDailyRates(params);
+
+            // カレンダー表示用フォーマットへ変換
+            const mapped = dailyRates.map(r => ({
+                date: r.date,
+                price: r.base_price != null ? Number(r.base_price) : monthlyData.basicSettings?.basePrice ?? basicSettings.basePrice,
+                isBlackout: r.available === false,
+                minNights: r.min_stay ?? monthlyData.basicSettings?.minNights ?? basicSettings.minNights,
+            }));
+
+            setCalendarData(mapped);
         } catch (error) {
             showSnackbar('データの読み込みに失敗しました', 'error');
         } finally {
