@@ -148,3 +148,9 @@ class AccommodationTax(models.Model):
             self.num_nights = max(1, nights)
             self.tax_amount = self.num_nights * self.tax_rate
         return self.tax_amount
+
+
+# Import DailyRate model
+from .models_pricing import DailyRate
+
+__all__ = ['Reservation', 'SyncStatus', 'AccommodationTax', 'DailyRate']

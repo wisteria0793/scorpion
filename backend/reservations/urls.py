@@ -6,6 +6,7 @@ from guest_forms import views as guest_forms_views
 
 router = DefaultRouter()
 router.register(r'accommodation-taxes', views.AccommodationTaxViewSet, basename='accommodation-tax')
+router.register(r'daily-rates', views.DailyRateViewSet, basename='daily-rate')
 
 urlpatterns = [
     path('check-in/<slug:facility_slug>/', views.ReservationLookupView.as_view(), name='reservation-lookup'),

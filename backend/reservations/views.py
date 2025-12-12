@@ -15,8 +15,12 @@ from django.db.models import Sum, Count
 from django.db.models.functions import TruncMonth, Extract
 
 from .models import Reservation, SyncStatus, AccommodationTax
+from .models_pricing import DailyRate
 from guest_forms.models import GuestSubmission, Property, FormTemplate
-from .serializers import SyncStatusSerializer, ReservationSerializer, DebugReservationSerializer, AccommodationTaxSerializer
+from .serializers import (
+    SyncStatusSerializer, ReservationSerializer, DebugReservationSerializer,
+    AccommodationTaxSerializer, DailyRateSerializer
+)
 
 
 class ReservationLookupView(APIView):
@@ -465,3 +469,38 @@ class AccommodationTaxViewSet(ModelViewSet):
         if instance.tax_rate and instance.reservation:
             instance.calculate_tax()
             instance.save()
+
+
+class DailyRateViewSet(ModelViewSet):
+    """
+    日別料金（カレンダー料金）のCRUD操作を提供するViewSet。
+    Beds24から取得した施設ごとの日別基本料金を管理。
+    """
+    queryset = DailyRate.objects.select_related('property').all()
+    serializer_class = DailyRateSerializer
+    filter_backends = [DjangoFilterBackend, OrderingFilter]
+    filterset_fields = ['property', 'property__id', 'date', 'available']
+    ordering_fields = ['date', 'base_price', 'created_at']
+    ordering = ['date']
+    
+    def get_queryset(self):
+        """
+        クエリパラメータによる追加フィルタリング:
+        - start_date: 指定日以降のデータ
+        - end_date: 指定日以前のデータ
+        - property_id: 施設ID
+        """
+        queryset = super().get_queryset()
+        
+        start_date = self.request.query_params.get('start_date')
+        end_date = self.request.query_params.get('end_date')
+        property_id = self.request.query_params.get('property_id')
+        
+        if start_date:
+            queryset = queryset.filter(date__gte=start_date)
+        if end_date:
+            queryset = queryset.filter(date__lte=end_date)
+        if property_id:
+            queryset = queryset.filter(property_id=property_id)
+            
+        return queryset

@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import SyncStatus, Reservation, AccommodationTax
+from .models_pricing import DailyRate
 from guest_forms.models import GuestSubmission
 
 class SyncStatusSerializer(serializers.ModelSerializer):
@@ -100,3 +101,25 @@ class AccommodationTaxSerializer(serializers.ModelSerializer):
             'created_at',
             'updated_at',
         ]
+
+
+class DailyRateSerializer(serializers.ModelSerializer):
+    """日別料金のシリアライザー"""
+    property_name = serializers.CharField(source='property.name', read_only=True)
+    property_id = serializers.IntegerField(source='property.id', read_only=True)
+    
+    class Meta:
+        model = DailyRate
+        fields = [
+            'id',
+            'property',
+            'property_id',
+            'property_name',
+            'date',
+            'base_price',
+            'available',
+            'min_stay',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = ['created_at', 'updated_at']

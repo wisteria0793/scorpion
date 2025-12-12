@@ -1,6 +1,7 @@
 # reservations/admin.py
 from django.contrib import admin
 from .models import Reservation, SyncStatus, AccommodationTax
+from .models_pricing import DailyRate
 
 @admin.register(Reservation)
 class ReservationAdmin(admin.ModelAdmin):
@@ -27,6 +28,32 @@ class AccommodationTaxAdmin(admin.ModelAdmin):
         }),
         ('支払情報', {
             'fields': ('payment_status', 'payment_method', 'payment_date', 'payment_reference', 'notes')
+        }),
+        ('タイムスタンプ', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+@admin.register(DailyRate)
+class DailyRateAdmin(admin.ModelAdmin):
+    list_display = ('property', 'date', 'base_price', 'available', 'min_stay', 'updated_at')
+    list_filter = ('property', 'available', 'date')
+    search_fields = ('property__name',)
+    readonly_fields = ('created_at', 'updated_at')
+    date_hierarchy = 'date'
+    ordering = ['-date', 'property']
+    
+    fieldsets = (
+        ('施設・日付', {
+            'fields': ('property', 'date')
+        }),
+        ('料金情報', {
+            'fields': ('base_price', 'available', 'min_stay')
+        }),
+        ('Beds24データ', {
+            'fields': ('beds24_data',),
+            'classes': ('collapse',)
         }),
         ('タイムスタンプ', {
             'fields': ('created_at', 'updated_at'),
