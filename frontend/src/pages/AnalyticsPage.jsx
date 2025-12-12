@@ -6,6 +6,7 @@ import ListAltIcon from '@mui/icons-material/ListAlt';
 import BusinessIcon from '@mui/icons-material/Business';
 import EditLocationIcon from '@mui/icons-material/EditLocation';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
+import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 
 import Header from '../components/Header';
 import RevenueAnalysis from '../components/RevenueAnalysis'; 
@@ -13,6 +14,7 @@ import ReservationList from '../components/ReservationList';
 import PropertyManagement from '../components/PropertyManagement';
 import TourismManagement from '../components/TourismManagement';
 import PricingManagement from '../components/PricingManagement';
+import RateCalendar from '../components/RateCalendar';
 
 const drawerWidth = 240;
 
@@ -20,6 +22,7 @@ const SideMenu = ({ currentView, setView }) => {
   const menuItems = [
     { text: '売上分析', view: 'revenue', icon: <DashboardIcon /> },
     { text: '月別予約一覧', view: 'reservations', icon: <ListAltIcon /> },
+    { text: '料金カレンダー', view: 'rate-calendar', icon: <CalendarMonthIcon /> },
     { text: '施設管理', view: 'properties', icon: <BusinessIcon /> },
     { text: '観光情報管理', view: 'tourism-management', icon: <EditLocationIcon /> },
     { text: '価格管理', view: 'pricing', icon: <AttachMoneyIcon /> },
@@ -61,6 +64,7 @@ function AnalyticsPage() {
     switch (view) {
       case 'revenue': return <RevenueAnalysis />; 
       case 'reservations': return <ReservationList />;
+      case 'rate-calendar': return <RateCalendar />;
       case 'properties': return <PropertyManagement />;
       case 'tourism-management': return <TourismManagement />;
       case 'pricing': return <PricingManagement />;
