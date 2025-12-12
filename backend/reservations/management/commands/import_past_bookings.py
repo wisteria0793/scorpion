@@ -1,13 +1,11 @@
 # reservations/management/commands/import_past_bookings.py
-import requests
-import csv
-import io
-import html
 from datetime import datetime
+
 from django.core.management.base import BaseCommand
-from django.conf import settings
+
 from guest_forms.models import Property
 from reservations.models import Reservation
+from reservations.services import Beds24SyncError, fetch_beds24_bookings
 
 class Command(BaseCommand):
     help = 'One-time script to import past bookings from a specified date range.'
@@ -38,100 +36,64 @@ class Command(BaseCommand):
 
         self.stdout.write(f"Importing past bookings from {start_date_str} to {end_date_str}...")
 
-        # --- 1. Beds24 API (getbookingscsv) からデータを取得 ---
-        url = "https://www.beds24.com/api/csv/getbookingscsv"
-        params = {
-            'username': settings.BEDS24_USERNAME,
-            'password': settings.BEDS24_PASSWORD,
-            'datefrom': start_date.strftime("%Y-%m-%d"),
-            'dateto': end_date.strftime("%Y-%m-%d"),
-            'includeInvoiceItems': 'true',
-        }
-        
+        # --- 1. Beds24 API からデータを取得（キャンセル・ブラック・拒否は除外） ---
         try:
-            response = requests.post(url, data=params)
-            response.raise_for_status()
-        except requests.exceptions.RequestException as e:
-            self.stderr.write(self.style.ERROR(f"Failed to fetch data from Beds24 API: {e}"))
+            bookings = fetch_beds24_bookings(
+                start_date,
+                end_date,
+                include_cancelled=True,
+                excluded_statuses={"Cancelled", "Black", "Declined"},
+            )
+        except Beds24SyncError as exc:
+            self.stderr.write(self.style.ERROR(str(exc)))
             return
 
         # --- 2. DBのProperty情報を準備 ---
-        properties_map = {str(prop.room_id): prop for prop in Property.objects.filter(room_id__isnull=False)}
-        if not properties_map:
-            self.stderr.write(self.style.ERROR("No properties with room_id found in the database."))
+        room_map = {}
+        property_key_map = {}
+        for prop in Property.objects.all():
+            if prop.room_id is not None:
+                room_map[str(prop.room_id)] = prop
+            if prop.beds24_property_key:
+                property_key_map[str(prop.beds24_property_key)] = prop
+
+        if not room_map and not property_key_map:
+            self.stderr.write(self.style.ERROR("No properties with room_id or beds24_property_key found in the database."))
             return
             
-        # --- 3. CSVデータを解析し、DBに保存 ---
-        csv_file = io.StringIO(response.text)
-        reader = csv.reader(csv_file)
-        
-        try:
-            header = next(reader)
-            cleaned_header = [h.strip().strip('"') for h in header]
-        except StopIteration:
-            self.stdout.write(self.style.WARNING("CSV data is empty."))
-            return
-
-        required_columns = {
-            'Master ID': 'beds24_book_id', 'Roomid': 'room_id', 'Status': 'status',
-            'Price': 'total_price', 'First Night': 'check_in_date', 'Last Night': 'check_out_date',
-            'Adult': 'adult_guests', 'Child': 'child_guests', 'Name': 'guest_name', 'Email': 'guest_email',
-        }
-        
-        try:
-            col_indices = {field: cleaned_header.index(col) for col, field in required_columns.items()}
-        except ValueError as e:
-            self.stderr.write(self.style.ERROR(f"CSV header is missing a required column: {e}"))
-            return
-
+        # --- 3. データをDBに保存 ---
         created_count = 0
         updated_count = 0
         skipped_count = 0
 
-        for row in reader:
-            try:
-                # 過去データなので、キャンセル以外は基本的にすべて取り込む
-                status_val = row[col_indices['status']]
-                if status_val in ["Cancelled", "Black", "Declined"]:
-                    continue
-
-                beds24_book_id = int(row[col_indices['beds24_book_id']])
-                room_id = str(row[col_indices['room_id']])
-                property_obj = properties_map.get(room_id)
-
-                if not property_obj:
-                    skipped_count += 1
-                    continue
-
-                adults = int(row[col_indices['adult_guests']]) if row[col_indices['adult_guests']] else 0
-                children = int(row[col_indices['child_guests']]) if row[col_indices['child_guests']] else 0
-                
-                defaults = {
-                    'property': property_obj,
-                    'status': status_val,
-                    'total_price': float(row[col_indices['total_price']]) if row[col_indices['total_price']] else 0.00,
-                    'check_in_date': datetime.strptime(row[col_indices['check_in_date']], "%d %b %Y").date(),
-                    'check_out_date': datetime.strptime(row[col_indices['check_out_date']], "%d %b %Y").date(),
-                    'num_guests': adults + children,
-                    'guest_name': html.unescape(row[col_indices['guest_name']]) if row[col_indices['guest_name']] else '',
-                    'guest_email': row[col_indices['guest_email']] if row[col_indices['guest_email']] else '',
-                }
-
-                obj, created = Reservation.objects.update_or_create(
-                    beds24_book_id=beds24_book_id,
-                    defaults=defaults
-                )
-                if created:
-                    created_count += 1
-                else:
-                    updated_count += 1
-
-            except (ValueError, TypeError, IndexError) as e:
-                self.stderr.write(self.style.WARNING(f"Skipping row due to parsing error: {e}. Row: {row}"))
+        for booking in bookings:
+            property_obj = room_map.get(booking.get('room_id')) or property_key_map.get(booking.get('property_key'))
+            if not property_obj:
                 skipped_count += 1
                 continue
+
+            num_guests = (booking.get('adult_guests') or 0) + (booking.get('child_guests') or 0)
+            defaults = {
+                'property': property_obj,
+                'status': booking['status'],
+                'total_price': booking['total_price'],
+                'check_in_date': booking['check_in_date'],
+                'check_out_date': booking['check_out_date'],
+                'num_guests': num_guests,
+                'guest_name': booking.get('guest_name', ''),
+                'guest_email': booking.get('guest_email', ''),
+            }
+
+            obj, created = Reservation.objects.update_or_create(
+                beds24_book_id=booking['beds24_book_id'],
+                defaults=defaults,
+            )
+            if created:
+                created_count += 1
+            else:
+                updated_count += 1
         
-        self.stdout.write(self.style.SUCCESS(f"--- Import complete! ---"))
+        self.stdout.write(self.style.SUCCESS("--- Import complete! ---"))
         self.stdout.write(f"New past bookings: {created_count}")
         self.stdout.write(f"Updated past bookings: {updated_count}")
-        self.stdout.write(f"Skipped rows: {skipped_count}")
+        self.stdout.write(f"Skipped rows (no property match): {skipped_count}")
