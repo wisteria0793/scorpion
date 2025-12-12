@@ -1,12 +1,16 @@
 import csv
 import html
 import io
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 from typing import Dict, List, Optional, Set
 
 import requests
 from django.conf import settings
+from django.utils import timezone
+
+from guest_forms.models import Property
+from .models import Reservation, SyncStatus
 
 
 class Beds24SyncError(Exception):
@@ -118,6 +122,108 @@ def parse_beds24_csv(
         })
 
     return bookings
+
+
+def sync_bookings_to_db(
+    bookings: List[Dict],
+    start_date: date,
+    end_date: date,
+    property_filter_id: Optional[int] = None,
+) -> Dict[str, int]:
+    """Persist Beds24 bookings into the local DB and mark cancellations.
+
+    Args:
+        bookings: normalized booking dicts from Beds24.
+        start_date: date range start (used for cancellation detection).
+        end_date: date range end (used for cancellation detection).
+        property_filter_id: if provided, only sync bookings mapped to this property.
+
+    Returns:
+        dict with counters: created, updated, cancelled, missing_property.
+    """
+
+    room_map: Dict[str, Property] = {}
+    property_key_map: Dict[str, Property] = {}
+
+    prop_qs = Property.objects.all()
+    if property_filter_id is not None:
+        prop_qs = prop_qs.filter(id=property_filter_id)
+
+    for prop in prop_qs:
+        if prop.room_id is not None:
+            room_map[str(prop.room_id)] = prop
+        if prop.beds24_property_key:
+            property_key_map[str(prop.beds24_property_key)] = prop
+
+    if not room_map and not property_key_map:
+        raise Beds24SyncError("No properties with room_id or beds24_property_key found. Cannot map bookings.")
+
+    created_count = 0
+    updated_count = 0
+    missing_property_count = 0
+    api_booking_ids = set()
+
+    for booking in bookings:
+        api_booking_ids.add(booking['beds24_book_id'])
+
+        property_obj = room_map.get(booking.get('room_id')) or property_key_map.get(booking.get('property_key'))
+        if property_filter_id is not None and property_obj and property_obj.id != property_filter_id:
+            # Skip bookings not belonging to the requested property
+            continue
+
+        if not property_obj:
+            missing_property_count += 1
+            continue
+
+        num_guests = (booking.get('adult_guests') or 0) + (booking.get('child_guests') or 0)
+        defaults = {
+            'property': property_obj,
+            'status': booking['status'],
+            'total_price': booking['total_price'],
+            'check_in_date': booking['check_in_date'],
+            'check_out_date': booking['check_out_date'],
+            'num_guests': num_guests,
+            'guest_name': booking.get('guest_name', ''),
+            'guest_email': booking.get('guest_email', ''),
+        }
+
+        obj, created = Reservation.objects.update_or_create(
+            beds24_book_id=booking['beds24_book_id'],
+            defaults=defaults,
+        )
+        if created:
+            created_count += 1
+        else:
+            updated_count += 1
+
+    # Detect cancellations within the date window
+    cancelled_count = 0
+    db_reservations = Reservation.objects.filter(
+        check_in_date__range=(start_date, end_date),
+        status__in=["Confirmed", "New", "Unknown"],
+    )
+    if property_filter_id is not None:
+        db_reservations = db_reservations.filter(property_id=property_filter_id)
+
+    db_booking_ids = set(db_reservations.values_list('beds24_book_id', flat=True))
+    cancelled_ids = db_booking_ids - api_booking_ids
+
+    if cancelled_ids:
+        cancelled_count = db_reservations.filter(beds24_book_id__in=cancelled_ids).update(status='Cancelled')
+
+    # Update last sync time
+    sync_time = timezone.now()
+    SyncStatus.objects.update_or_create(
+        pk=1,
+        defaults={'last_sync_time': sync_time},
+    )
+
+    return {
+        'created': created_count,
+        'updated': updated_count,
+        'cancelled': cancelled_count,
+        'missing_property': missing_property_count,
+    }
 
 
 def _normalize(value: str) -> str:

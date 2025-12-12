@@ -6,6 +6,10 @@ from rest_framework import status
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.permissions import AllowAny
 from rest_framework.permissions import AllowAny
+from datetime import date, timedelta
+
+from reservations.services import Beds24SyncError, fetch_beds24_bookings, sync_bookings_to_db
+from reservations.models import SyncStatus
 
 from .models import Property, FacilityImage, GuestSubmission, FormTemplate, PricingRule
 from .serializers import PropertySerializer, FacilityImageSerializer, FormTemplateSerializer, GuestSubmissionSerializer, PricingRuleSerializer
@@ -298,26 +302,39 @@ class Beds24SyncAPIView(APIView):
                 {'error': '施設が見つかりません'},
                 status=status.HTTP_404_NOT_FOUND
             )
-        
+
         sync_type = request.data.get('sync_type', 'basic')
-        
-        # Beds24 APIへのリクエスト（今後実装）
-        # 現在はダミーレスポンスを返す
-        
+
+        # 1) Beds24から次の365日分の予約を取得
+        start_date = date.today()
+        end_date = start_date + timedelta(days=365)
+
+        try:
+            bookings = fetch_beds24_bookings(start_date, end_date)
+        except Beds24SyncError as exc:
+            return Response({'error': str(exc)}, status=status.HTTP_502_BAD_GATEWAY)
+
+        # 2) 対象施設に紐づく予約のみ同期
+        counts = sync_bookings_to_db(bookings, start_date, end_date, property_filter_id=property_id)
+
+        # 3) 最終同期時刻を返す
+        try:
+            sync_status = SyncStatus.objects.get(pk=1)
+            last_sync = sync_status.last_sync_time
+        except SyncStatus.DoesNotExist:
+            last_sync = None
+
         response_data = {
             'status': 'synced',
             'sync_type': sync_type,
             'property_id': property_id,
             'property_name': property_obj.name,
-            'message': f'{sync_type} sync completed',
+            'created': counts['created'],
+            'updated': counts['updated'],
+            'cancelled': counts['cancelled'],
+            'missing_property': counts['missing_property'],
+            'last_sync_time': last_sync.isoformat() if last_sync else None,
         }
-        
-        if sync_type == 'basic':
-            response_data['synced_fields'] = ['basePrice', 'baseGuests', 'adultExtraPrice', 'childExtraPrice', 'minNights']
-        elif sync_type == 'calendar':
-            response_data['synced_fields'] = ['basic_settings', 'calendar_data']
-        elif sync_type == 'all':
-            response_data['synced_fields'] = ['all']
-        
+
         return Response(response_data, status=status.HTTP_200_OK)
 
