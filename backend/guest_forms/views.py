@@ -9,7 +9,8 @@ from rest_framework.permissions import AllowAny
 from datetime import date, timedelta
 
 from reservations.services import Beds24SyncError, fetch_beds24_bookings, sync_bookings_to_db
-from reservations.models import SyncStatus
+from reservations.models import SyncStatus, Reservation
+from guest_forms.google_sheets_service import GoogleSheetsService
 
 from .models import Property, FacilityImage, GuestSubmission, FormTemplate, PricingRule
 from .serializers import PropertySerializer, FacilityImageSerializer, FormTemplateSerializer, GuestSubmissionSerializer, PricingRuleSerializer
@@ -75,6 +76,7 @@ class GuestFormSubmitView(APIView):
     """
     POST /api/guest-forms/{token}/submit/
     ゲストが入力したフォームの内容を保存する
+    提出完了時に自動的に Google Sheets の提出状況を更新
     """
     parser_classes = [MultiPartParser, FormParser] # ファイルアップロードに対応
 
@@ -100,11 +102,47 @@ class GuestFormSubmitView(APIView):
             # 予約自体のステータスも更新
             submission.reservation.guest_roster_status = Reservation.RosterStatus.SUBMITTED
             submission.reservation.save()
+            
+            # Google Sheets の提出状況を更新
+            self._update_google_sheets_status(submission.reservation)
 
             return Response(status=status.HTTP_201_CREATED)
 
         except GuestSubmission.DoesNotExist:
             return Response({"error": "無効なトークンです。"}, status=status.HTTP_404_NOT_FOUND)
+
+    def _update_google_sheets_status(self, reservation):
+        """
+        Google Sheets の対応する行の提出状況を更新
+        施設ごとの google_sheets_url から Sheet ID を抽出して更新
+        """
+        try:
+            property_obj = reservation.property
+            
+            # 施設ごとの Sheet URL をチェック
+            if property_obj.google_sheets_url:
+                sheet_id = GoogleSheetsService.extract_sheet_id_from_url(property_obj.google_sheets_url)
+                if sheet_id:
+                    service = GoogleSheetsService(spreadsheet_id=sheet_id)
+                else:
+                    return
+            else:
+                # グローバル設定を使用
+                from guest_forms.google_sheets_service import google_sheets_service
+                service = google_sheets_service
+            
+            if not service.is_configured():
+                return
+            
+            # beds24_book_id をキーに Google Sheets の該当行を更新
+            service.update_roster_status(
+                reservation.beds24_book_id,
+                'submitted'
+            )
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Failed to update Google Sheets status: {e}")
 
 
 class GuestFormUpdateView(APIView):

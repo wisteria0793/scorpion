@@ -131,9 +131,10 @@ class GoogleSheetsService:
     def update_roster_status(self, beds24_book_id: int, status: str) -> bool:
         """
         既存の予約の名簿提出状況を更新
+        beds24_book_id をキーに Google Sheets 内の該当行を検索して更新
         
         Args:
-            beds24_book_id: Beds24予約ID
+            beds24_book_id: Beds24予約ID（A列で検索）
             status: 新しいステータス ('pending', 'submitted', 'verified')
         
         Returns:
@@ -152,12 +153,16 @@ class GoogleSheetsService:
             response = request.execute()
             values = response.get('values', [])
             
-            # 予約IDが一致する行を探す
+            # 予約IDが一致する行を探す（A列を検索）
             row_index = None
             for idx, row in enumerate(values):
-                if row and str(row[0]) == str(beds24_book_id):
-                    row_index = idx + 1  # 1-indexed (headerがあるため+1)
-                    break
+                if row and len(row) > 0:
+                    try:
+                        if int(row[0]) == beds24_book_id:
+                            row_index = idx + 1  # 1-indexed
+                            break
+                    except (ValueError, TypeError):
+                        continue
             
             if row_index is None:
                 logger.warning(f"Reservation {beds24_book_id} not found in sheet")
@@ -179,7 +184,7 @@ class GoogleSheetsService:
             return True
         
         except HttpError as error:
-            logger.error(f"Google Sheets API error: {error}")
+            logger.error(f"Google Sheets API error while updating status: {error}")
             return False
         except Exception as e:
             logger.error(f"Error updating roster status: {e}")
