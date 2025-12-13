@@ -3,7 +3,9 @@
 ## Beds24 API 連携（推奨）
 
 ### 概要
-Beds24の `getDailyPriceSetup` JSON APIと連携し、日別料金を自動同期します。
+Beds24のAPI（JSON/CSV両対応）と連携し、日別料金を自動同期します。
+- **JSON API**: `getDailyPriceSetup` - 構造化データ、詳細情報
+- **CSV API**: `getroomdailycsv` - シンプル、高速（推奨）
 
 ### 前提条件
 1. Beds24アカウントとAPIキーの取得
@@ -30,24 +32,39 @@ Django Adminで各施設に以下を設定：
 ```bash
 cd /workspaces/scorpion/backend
 
-# 全施設・今日から90日分を同期
+# CSV API使用（推奨）
+python manage.py sync_rates_from_beds24 --use-csv --days 90
+
+# JSON API使用
 python manage.py sync_rates_from_beds24 --days 90
 
-# 特定施設のみ同期
-python manage.py sync_rates_from_beds24 --property-id 7 --days 30
+# 特定施設のみ同期（CSV）
+python manage.py sync_rates_from_beds24 --use-csv --property-id 7 --days 30
 
-# 日付範囲を指定
-python manage.py sync_rates_from_beds24 --property-id 7 --start 2025-12-01 --end 2025-12-31
+# 日付範囲を指定（CSV）
+python manage.py sync_rates_from_beds24 --use-csv --property-id 7 --start 2025-12-01 --end 2025-12-31
 
-# roomIdを明示的に指定
-python manage.py sync_rates_from_beds24 --property-id 7 --room-id 123456 --days 30
+# roomIdを明示的に指定（CSV）
+python manage.py sync_rates_from_beds24 --use-csv --property-id 7 --room-id 123456 --days 30
 ```
 
 ### 定期同期（推奨）
 Cron または Render/Vercel のスケジュール機能で毎日実行：
 ```bash
-0 3 * * * cd /path/to/backend && python manage.py sync_rates_from_beds24 --days 90
+0 3 * * * cd /path/to/backend && python manage.py sync_rates_from_beds24 --use-csv --days 90
 ```
+
+### CSV vs JSON API 比較
+
+| 項目 | CSV API | JSON API |
+|------|---------|----------|
+| エンドポイント | `getroomdailycsv` | `getDailyPriceSetup` |
+| データ形式 | CSV（テキスト） | JSON（構造化） |
+| 速度 | 高速 | 通常 |
+| データ量 | 軽量 | 重い |
+| パラメータ | GET（シンプル） | POST（複雑） |
+| 推奨用途 | 大量データ・定期同期 | 詳細情報が必要な場合 |
+| コマンド | `--use-csv` フラグ | デフォルト |
 
 ---
 
@@ -217,12 +234,14 @@ class DailyRateViewSet(ModelViewSet):
 ### ファイル構成
 - **API設定**: [backend/api/settings.py](backend/api/settings.py) - Beds24認証情報
 - **サービス層**: [backend/reservations/services_pricing.py](backend/reservations/services_pricing.py)
-  - `fetch_beds24_daily_price_setup()` - Beds24 API呼び出し
-  - `sync_daily_rates_from_beds24()` - DailyRateへ同期
+    - `fetch_beds24_daily_price_setup()` - Beds24 JSON API呼び出し
+    - `fetch_beds24_room_daily_csv()` - Beds24 CSV API呼び出し
+    - `sync_daily_rates_from_beds24()` - JSON → DailyRateへ同期
+    - `sync_daily_rates_from_beds24_csv()` - CSV → DailyRateへ同期
 - **管理コマンド**: [backend/reservations/management/commands/sync_rates_from_beds24.py](backend/reservations/management/commands/sync_rates_from_beds24.py)
 - **モデル**: [backend/reservations/models_pricing.py](backend/reservations/models_pricing.py) - DailyRateモデル定義
 
-### Beds24 APIペイロード構造
+### Beds24 JSON APIペイロード構造
 ```json
 {
   "authentication": {
@@ -239,20 +258,44 @@ class DailyRateViewSet(ModelViewSet):
 }
 ```
 
+### Beds24 CSV APIパラメータ
+```
+GET https://www.beds24.com/api/csv/getroomdailycsv?
+    apiKey=xxx&
+    username=xxx&
+    password=xxx&
+    propKey=xxx&
+    roomId=123&
+    startDate=20251201&
+    endDate=20251231
+```
+
+**CSVフォーマット例**:
+```csv
+date,price,minStay,available
+2025-12-01,8000,1,1
+2025-12-02,8000,1,1
+2025-12-05,15000,2,1
+...
+```
+
 ### レスポンスマッピング
-| Beds24フィールド | DailyRateフィールド | 備考 |
-|-----------------|-------------------|------|
-| `date` | `date` | 日付 |
-| `price` / `basePrice` | `base_price` | 1泊料金 |
-| `minStay` / `minstay` | `min_stay` | 最小宿泊数 |
-| `available` | `available` | 予約可否 |
-| (全体) | `beds24_data` | 元JSONを保存 |
+| Beds24フィールド | DailyRateフィールド | 備考 | 対応形式 |
+|-----------------|-------------------|------|----|
+| `date` / `day` | `date` | 日付 | JSON/CSV |
+| `price` / `basePrice` | `base_price` | 1泊料金 | JSON/CSV |
+| `minStay` / `minstay` | `min_stay` | 最小宿泊数 | JSON/CSV |
+| `available` / `status` | `available` | 予約可否 | JSON/CSV |
+| (全体) | `beds24_data` | 元データを保存 | JSON/CSV |
 
 ---
 
 ## 更新履歴
 
 ### 2025-12-13
+- ✅ Beds24 CSV API (getroomdailycsv) 連携を追加
+- ✅ --use-csv フラグでJSON/CSV切り替え可能に
+- ✅ CSV柔軟パース（カラム名の差異を吸収）
 - ✅ Beds24 getDailyPriceSetup API連携を追加
 - ✅ propKey/roomId対応
 - ✅ 認証方式の柔軟化（USERNAME/PASSWORD または ACCOUNT_ID）

@@ -5,6 +5,8 @@ Beds24から日別料金データを取得し、データベースに同期す�
 import requests
 import csv
 from datetime import date, timedelta
+import csv
+from io import StringIO
 from decimal import Decimal, InvalidOperation
 from typing import List, Dict, Optional
 from django.conf import settings
@@ -118,6 +120,136 @@ def sync_daily_rates_from_beds24(property_obj, start: date, end: date):
             continue
 
     return {'count': saved, 'from': start.isoformat(), 'to': end.isoformat()}
+
+
+def fetch_beds24_room_daily_csv(prop_key: str, start: date, end: date, room_id: int | None = None):
+    """
+    Beds24 CSV API `getroomdailycsv` を呼び出して、指定期間の日別料金CSVを取得。
+
+    必要な設定:
+    - settings.BEDS24_API_KEY (または環境変数 BEDS24_APIKEY)
+    - settings.BEDS24_USERNAME / BEDS24_PASSWORD または BEDS24_ACCOUNT_ID
+
+    返却: CSV文字列
+    """
+    api_key = getattr(settings, 'BEDS24_API_KEY', None) or os.environ.get('BEDS24_APIKEY')
+    username = os.environ.get('BEDS24_USERNAME')
+    password = os.environ.get('BEDS24_PASSWORD')
+    
+    if not api_key or not (username and password):
+        raise RuntimeError('Beds24 API認証情報が不足しています (APIKEY と USERNAME/PASSWORD)')
+
+    url = 'https://www.beds24.com/api/csv/getroomdailycsv'
+    params = {
+        'apiKey': api_key,
+        'username': username,
+        'password': password,
+        'propKey': prop_key,
+        'startDate': start.strftime('%Y%m%d'),
+        'endDate': end.strftime('%Y%m%d'),
+    }
+    if room_id:
+        params['roomId'] = int(room_id)
+
+    resp = requests.get(url, params=params, timeout=30)
+    resp.raise_for_status()
+    csv_text = resp.text
+    
+    # Beds24のエラーは通常HTMLで返るが、CSVの場合は最初の行に"Error"が含まれることがある
+    if 'Error' in csv_text[:200] or '<html>' in csv_text.lower()[:200]:
+        raise RuntimeError(f"Beds24 CSV API error: {csv_text[:500]}")
+    
+    return csv_text
+
+
+def sync_daily_rates_from_beds24_csv(property_obj, start: date, end: date):
+    """
+    Beds24のCSV形式日別料金データを`DailyRate`に反映。
+    
+    CSV形式の想定:
+    - ヘッダー行: date, price, minStay, available など（実際のカラム名は可変）
+    - 各行: 日付ごとのデータ
+    
+    注意: Beds24のCSVフォーマットはアカウント設定により差異があり得るため、
+    柔軟にパースを試みる。
+    """
+    if not property_obj.beds24_property_key:
+        raise RuntimeError('Propertyにbeds24_property_keyが設定されていません')
+
+    csv_text = fetch_beds24_room_daily_csv(
+        property_obj.beds24_property_key,
+        start,
+        end,
+        room_id=getattr(property_obj, 'room_id', None)
+    )
+
+    # CSVをパース
+    reader = csv.DictReader(StringIO(csv_text))
+    saved = 0
+    
+    for row in reader:
+        # 柔軟なカラム名対応（大文字小文字、スペース、アンダースコアなど）
+        row_lower = {k.lower().strip().replace(' ', '_'): v for k, v in row.items()}
+        
+        # 日付の取得（date, Date, day など）
+        d = row_lower.get('date') or row_lower.get('day') or row_lower.get('checkdate')
+        if not d:
+            continue
+        
+        # 日付フォーマット変換（YYYYMMDD → YYYY-MM-DD）
+        try:
+            if len(d) == 8 and d.isdigit():
+                d = f"{d[:4]}-{d[4:6]}-{d[6:]}"
+            elif '/' in d:
+                # MM/DD/YYYY など
+                parts = d.split('/')
+                if len(parts) == 3:
+                    d = f"{parts[2]}-{parts[0].zfill(2)}-{parts[1].zfill(2)}"
+        except Exception:
+            continue
+        
+        # 料金の取得
+        price = row_lower.get('price') or row_lower.get('baseprice') or row_lower.get('rate')
+        if price:
+            try:
+                price = float(str(price).replace(',', ''))
+            except (ValueError, TypeError):
+                price = None
+        
+        # 最小宿泊数
+        min_stay = row_lower.get('minstay') or row_lower.get('min_stay') or row_lower.get('minnight')
+        if min_stay:
+            try:
+                min_stay = int(min_stay)
+            except (ValueError, TypeError):
+                min_stay = 1
+        else:
+            min_stay = 1
+        
+        # 空室状況
+        available = row_lower.get('available') or row_lower.get('status')
+        if available:
+            available = str(available).lower() in ('1', 'true', 'yes', 'available')
+        else:
+            available = True
+        
+        try:
+            obj, _created = DailyRate.objects.update_or_create(
+                property=property_obj,
+                date=d,
+                defaults={
+                    'base_price': price,
+                    'min_stay': min_stay,
+                    'available': available,
+                    'beds24_data': dict(row),  # 元データを保存
+                }
+            )
+            saved += 1
+        except Exception:
+            # 個別の不整合はスキップ
+            continue
+
+    return {'count': saved, 'from': start.isoformat(), 'to': end.isoformat(), 'format': 'csv'}
 
 
 class Beds24PricingError(Exception):

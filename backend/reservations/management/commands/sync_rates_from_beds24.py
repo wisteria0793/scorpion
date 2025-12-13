@@ -1,11 +1,14 @@
 from django.core.management.base import BaseCommand
 from datetime import date, timedelta
 from guest_forms.models import Property
-from reservations.services_pricing import sync_daily_rates_from_beds24
+from reservations.services_pricing import (
+    sync_daily_rates_from_beds24,
+    sync_daily_rates_from_beds24_csv,
+)
 
 
 class Command(BaseCommand):
-    help = 'Beds24(getDailyPriceSetup)から日別料金を取得しDailyRateへ同期'
+    help = 'Beds24から日別料金を取得しDailyRateへ同期（JSON/CSV両対応）'
 
     def add_arguments(self, parser):
         parser.add_argument('--property-id', type=int, help='対象施設ID（未指定なら全施設）')
@@ -13,6 +16,7 @@ class Command(BaseCommand):
         parser.add_argument('--start', type=str, help='開始日 YYYY-MM-DD（指定時は--daysより優先）')
         parser.add_argument('--end', type=str, help='終了日 YYYY-MM-DD（指定時は--daysより優先）')
         parser.add_argument('--room-id', type=int, help='Beds24のroomId（未指定ならProperty.room_idを使用）')
+        parser.add_argument('--use-csv', action='store_true', help='CSV API (getroomdailycsv) を使用（デフォルトはJSON API）')
 
     def handle(self, *args, **options):
         prop_id = options.get('property_id')
@@ -39,11 +43,17 @@ class Command(BaseCommand):
         total_saved = 0
         for prop in qs:
             try:
-                self.stdout.write(f"Syncing {prop.name} (ID:{prop.id}, roomId:{prop.room_id}) from {start} to {end}...")
+                api_type = 'CSV' if options.get('use_csv') else 'JSON'
+                self.stdout.write(f"Syncing {prop.name} (ID:{prop.id}, roomId:{prop.room_id}) via {api_type} from {start} to {end}...")
                 # room-id引数がある場合は一時的に上書き
                 if options.get('room_id'):
                     setattr(prop, 'room_id', options['room_id'])
-                result = sync_daily_rates_from_beds24(prop, start, end)
+                
+                if options.get('use_csv'):
+                    result = sync_daily_rates_from_beds24_csv(prop, start, end)
+                else:
+                    result = sync_daily_rates_from_beds24(prop, start, end)
+                
                 total_saved += result['count']
                 self.stdout.write(self.style.SUCCESS(f"  saved: {result['count']}"))
             except Exception as e:
