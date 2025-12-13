@@ -71,6 +71,14 @@ class Property(models.Model):
     management_type = models.CharField(max_length=50, null=True, blank=True, verbose_name="管理形態")
     amenities = models.ManyToManyField(Amenity, related_name='properties', blank=True, verbose_name="アメニティ")
 
+    # Google Sheets 連携
+    google_sheets_url = models.URLField(
+        null=True, 
+        blank=True, 
+        verbose_name="Google Sheets URL",
+        help_text="予約情報を管理するGoogle SheetsのURL（https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit）"
+    )
+
     # 価格設定関連
     base_price = models.IntegerField(default=10000, verbose_name="基本料金（¥/泊）")
     base_guests = models.IntegerField(default=4, verbose_name="基本人数")

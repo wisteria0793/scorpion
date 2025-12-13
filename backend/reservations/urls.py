@@ -20,4 +20,8 @@ urlpatterns = [
     path('reservations/monthly/', views.MonthlyReservationListView.as_view(), name='monthly-reservations-api'),
     path('sync-status/', views.LastSyncTimeView.as_view(), name='sync-status'),
     path('debug/reservations/', views.DebugReservationListView.as_view(), name='debug-reservations-api'),
+    # 宿泊者名簿提出状況API
+    path('roster-status/', views.RosterSubmissionStatusView.as_view(), name='roster-status'),
+    path('roster-stats/', views.RosterSubmissionStatsView.as_view(), name='roster-stats'),
+    path('pending-rosters/', views.PendingRostersView.as_view(), name='pending-rosters'),
 ] + router.urls

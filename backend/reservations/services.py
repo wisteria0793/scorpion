@@ -10,6 +10,7 @@ from django.conf import settings
 from django.utils import timezone
 
 from guest_forms.models import Property
+from guest_forms.google_sheets_service import google_sheets_service
 from .models import Reservation, SyncStatus
 
 
@@ -193,6 +194,8 @@ def sync_bookings_to_db(
         )
         if created:
             created_count += 1
+            # 新規予約を Google Sheets に追加
+            sync_reservation_to_google_sheets(obj)
         else:
             updated_count += 1
 
@@ -279,3 +282,54 @@ def _parse_date(row: List[str], index: Optional[int]):
         raise ValueError("Missing date column")
     raw = row[index].strip()
     return datetime.strptime(raw, "%d %b %Y").date()
+
+
+def sync_reservation_to_google_sheets(reservation: Reservation) -> bool:
+    """
+    予約情報を Google Sheets に追加または更新
+    施設ごとの URL が設定されている場合はそれを使用
+    
+    Args:
+        reservation: Reservation オブジェクト
+    
+    Returns:
+        成功した場合は True、失敗した場合は False
+    """
+    try:
+        # 施設ごとの Sheet URL を取得
+        property_obj = reservation.property
+        if property_obj.google_sheets_url:
+            # URL から Sheet ID を抽出
+            from guest_forms.google_sheets_service import GoogleSheetsService
+            sheet_id = GoogleSheetsService.extract_sheet_id_from_url(property_obj.google_sheets_url)
+            if not sheet_id:
+                return False
+            # 施設ごとのサービスインスタンスを作成
+            service = GoogleSheetsService(spreadsheet_id=sheet_id)
+        else:
+            # グローバルな設定を使用
+            service = google_sheets_service
+        
+        if not service.is_configured():
+            return False
+        
+        reservation_data = {
+            'beds24_book_id': reservation.beds24_book_id,
+            'property_name': property_obj.name,
+            'guest_name': reservation.guest_name or '',
+            'guest_email': reservation.guest_email or '',
+            'check_in_date': reservation.check_in_date.isoformat(),
+            'check_out_date': reservation.check_out_date.isoformat() if reservation.check_out_date else '',
+            'num_guests': reservation.num_guests,
+            'roster_status': reservation.get_guest_roster_status_display(),
+            'total_price': float(reservation.total_price),
+            'created_at': reservation.created_at.isoformat(),
+        }
+        
+        return service.append_reservation(reservation_data)
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Failed to sync reservation to Google Sheets: {e}")
+        return False
+

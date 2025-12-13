@@ -42,9 +42,30 @@
 - [x] 施設情報登録・更新・削除
 - [x] 観光情報管理（観光施設・イベント・季節のおすすめ）の登録・表示
 - [x] 予約ごとの宿泊税支払い状況の管理・確認
-- [ ] 宿泊者名簿の提出状況の管理・確認 (GCPスプレッドシート連携)
+- [x] 宿泊者名簿の提出状況の管理・確認 (Google Sheets API連携)
 - [ ] Stripeを利用した宿泊税のオンライン決済
-<!-- - [ ] 施設ごとの予約不可日の設定 -->
+
+## Google Sheets API 統合（新規追加）
+
+### 機能概要
+Google Cloud Platform（GCP）の Sheets API を統合し、予約情報と宿泊者名簿の提出状況をリアルタイムで管理・共有できるようになりました。
+
+### 主な機能
+1. **自動同期**: Beds24 から取得した新規予約が自動的に Google Sheets に追加
+2. **提出状況管理**: 宿泊者名簿の提出状況を追跡
+3. **統計・レポート**: 施設ごとの提出完了率を可視化
+4. **API エンドポイント**: RESTful API で提出状況を確認
+
+### セットアップ
+- [セットアップガイド](./docs/GOOGLE_SHEETS_API_GUIDE.md)
+- [実装詳細](./docs/GOOGLE_SHEETS_IMPLEMENTATION.md)
+
+### 新規 API エンドポイント
+```
+GET /api/reservations/roster-status/     # 名簿提出状況一覧
+GET /api/reservations/roster-stats/      # 提出状況の統計
+GET /api/reservations/pending-rosters/   # 提出待ちの予約一覧
+```
 
 ## 多言語対応フォームのデータ入力方法
 

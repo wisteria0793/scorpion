@@ -19,6 +19,7 @@ services:
       - db
     volumes:
       - media-data:/app/media
+      - /secure/path/service-account-key.json:/app/credentials/service-account-key.json:ro
 
   db:
     image: postgres:15

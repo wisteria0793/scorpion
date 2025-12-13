@@ -504,3 +504,195 @@ class DailyRateViewSet(ModelViewSet):
             queryset = queryset.filter(property_id=property_id)
             
         return queryset
+
+
+class RosterSubmissionStatusView(APIView):
+    """
+    GET /api/reservations/roster-status/
+    予約に対する宿泊者名簿の提出状況を確認するエンドポイント
+    
+    クエリパラメータ:
+    - property_id: 施設ID（optional）
+    - status: 'pending', 'submitted', 'verified'（optional）
+    """
+    
+    def get(self, request):
+        """
+        名簿提出状況の一覧を取得
+        """
+        property_id = request.query_params.get('property_id')
+        status_filter = request.query_params.get('status')
+        
+        # 基本的なクエリセット
+        reservations = Reservation.objects.select_related(
+            'property', 'guestsubmission'
+        ).filter(
+            status='Accepted'  # 確定済みの予約のみ
+        ).order_by('-check_in_date')
+        
+        # フィルタリング
+        if property_id:
+            try:
+                reservations = reservations.filter(property_id=int(property_id))
+            except (ValueError, TypeError):
+                return Response(
+                    {"error": "property_id は整数である必要があります"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        
+        if status_filter:
+            if status_filter not in dict(Reservation.RosterStatus.choices):
+                return Response(
+                    {"error": f"無効なステータスです: {status_filter}"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            reservations = reservations.filter(guest_roster_status=status_filter)
+        
+        # レスポンスデータを構築
+        data = {
+            'count': reservations.count(),
+            'results': []
+        }
+        
+        for reservation in reservations:
+            submission = getattr(reservation, 'guestsubmission', None)
+            data['results'].append({
+                'id': reservation.id,
+                'beds24_book_id': reservation.beds24_book_id,
+                'property': {
+                    'id': reservation.property.id,
+                    'name': reservation.property.name,
+                    'slug': reservation.property.slug,
+                },
+                'guest_name': reservation.guest_name,
+                'guest_email': reservation.guest_email,
+                'check_in_date': reservation.check_in_date.isoformat(),
+                'check_out_date': reservation.check_out_date.isoformat() if reservation.check_out_date else None,
+                'num_guests': reservation.num_guests,
+                'total_price': float(reservation.total_price),
+                'roster_status': reservation.guest_roster_status,
+                'submission': {
+                    'id': submission.id if submission else None,
+                    'token': str(submission.token) if submission else None,
+                    'status': submission.status if submission else None,
+                    'submitted_at': submission.updated_at.isoformat() if submission and submission.status == GuestSubmission.SubmissionStatus.COMPLETED else None,
+                } if submission else None,
+                'created_at': reservation.created_at.isoformat(),
+            })
+        
+        return Response(data, status=status.HTTP_200_OK)
+
+
+class RosterSubmissionStatsView(APIView):
+    """
+    GET /api/reservations/roster-stats/
+    施設ごとの名簿提出状況の統計情報を取得
+    """
+    
+    def get(self, request):
+        """
+        名簿提出状況の統計を取得
+        """
+        # 確定済みの予約を対象
+        reservations = Reservation.objects.filter(
+            status='Accepted'
+        ).select_related('property')
+        
+        # 施設ごとの統計
+        stats = {}
+        for property_obj in Property.objects.all():
+            property_reservations = reservations.filter(property=property_obj)
+            
+            pending_count = property_reservations.filter(
+                guest_roster_status=Reservation.RosterStatus.PENDING
+            ).count()
+            submitted_count = property_reservations.filter(
+                guest_roster_status=Reservation.RosterStatus.SUBMITTED
+            ).count()
+            verified_count = property_reservations.filter(
+                guest_roster_status=Reservation.RosterStatus.VERIFIED
+            ).count()
+            
+            total_count = property_reservations.count()
+            
+            if total_count > 0:
+                stats[property_obj.slug] = {
+                    'property_id': property_obj.id,
+                    'property_name': property_obj.name,
+                    'total': total_count,
+                    'pending': pending_count,
+                    'submitted': submitted_count,
+                    'verified': verified_count,
+                    'completion_rate': round((verified_count + submitted_count) / total_count * 100, 2),
+                }
+        
+        return Response(stats, status=status.HTTP_200_OK)
+
+
+class PendingRostersView(APIView):
+    """
+    GET /api/reservations/pending-rosters/
+    名簿提出がまだ完了していない予約を一覧取得
+    """
+    
+    def get(self, request):
+        """
+        提出待ちの予約を取得
+        """
+        property_id = request.query_params.get('property_id')
+        days_ahead = request.query_params.get('days_ahead', 3)  # デフォルト3日後までの予約
+        
+        try:
+            days_ahead = int(days_ahead)
+        except (ValueError, TypeError):
+            days_ahead = 3
+        
+        # 今日から指定日数先までの予約で、名簿提出がまだの予約を検索
+        today = date.today()
+        future_date = today + timedelta(days=days_ahead)
+        
+        reservations = Reservation.objects.filter(
+            status='Accepted',
+            check_in_date__gte=today,
+            check_in_date__lte=future_date,
+            guest_roster_status=Reservation.RosterStatus.PENDING
+        ).select_related('property', 'guestsubmission').order_by('check_in_date')
+        
+        if property_id:
+            try:
+                reservations = reservations.filter(property_id=int(property_id))
+            except (ValueError, TypeError):
+                return Response(
+                    {"error": "property_id は整数である必要があります"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        
+        data = {
+            'count': reservations.count(),
+            'date_range': {
+                'from': today.isoformat(),
+                'to': future_date.isoformat(),
+            },
+            'results': []
+        }
+        
+        for reservation in reservations:
+            submission = getattr(reservation, 'guestsubmission', None)
+            days_until_checkin = (reservation.check_in_date - today).days
+            
+            data['results'].append({
+                'id': reservation.id,
+                'beds24_book_id': reservation.beds24_book_id,
+                'property': {
+                    'id': reservation.property.id,
+                    'name': reservation.property.name,
+                },
+                'guest_name': reservation.guest_name,
+                'guest_email': reservation.guest_email,
+                'check_in_date': reservation.check_in_date.isoformat(),
+                'num_guests': reservation.num_guests,
+                'days_until_checkin': days_until_checkin,
+                'submission_form_url': f"https://your-domain.com/submit-roster/{submission.token}/" if submission else None,
+            })
+        
+        return Response(data, status=status.HTTP_200_OK)
