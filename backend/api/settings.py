@@ -192,6 +192,12 @@ REST_FRAMEWORK = {
     ],
 }
 
+# Beds24 API credentials (set via environment variables)
+# BEDS24_ACCOUNT_ID: Beds24のアカウントID
+# BEDS24_API_KEY: Beds24のAPIキー
+BEDS24_ACCOUNT_ID = os.environ.get('BEDS24_ACCOUNT_ID')
+BEDS24_API_KEY = os.environ.get('BEDS24_API_KEY')
+
 # Emit errors to stdout/stderr so Render logs capture 500 traces
 LOGGING = {
     'version': 1,
