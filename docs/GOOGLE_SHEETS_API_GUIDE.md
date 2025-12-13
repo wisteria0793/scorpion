@@ -197,10 +197,158 @@ if google_sheets_service.is_configured():
     
     # 名簿提出状況を更新
     google_sheets_service.update_roster_status(12345, 'submitted')
-    
-    # 提出待ちの予約を取得
-    pending = google_sheets_service.get_pending_rosters()
+## 定期実行の設定
+
+Google Sheets への同期は、既存の **Beds24 予約同期コマンド** と統合されています。
+
+### 自動同期のフロー
+
 ```
+┌──────────────────┐
+│  Beds24 API      │
+└────────┬─────────┘
+         │ (予約データを取得)
+         ▼
+┌──────────────────────────────┐
+│ sync_bookings コマンド実行     │
+└────────┬─────────────────────┘
+         │ 1. Beds24 → DB に同期
+         ▼
+┌──────────────────────────────┐
+│ Django DB (Reservation)      │
+└────────┬─────────────────────┘
+         │ 2. 新規予約を検出
+         ▼
+┌──────────────────────────────┐
+│ Google Sheets API            │
+└────────┬─────────────────────┘
+         │ 3. 自動的に追加
+         ▼
+┌──────────────────────────────┐
+│ Google Sheets (各施設)       │
+└──────────────────────────────┘
+```
+
+### コマンド実行
+
+**手動実行:**
+```bash
+# 全予約を同期（今日から365日分）
+python manage.py sync_bookings
+
+# 同期期間をカスタマイズ
+python manage.py sync_bookings --days 30
+```
+
+### 定期実行の設定
+
+#### 方法1: cron + venv（単純・推奨）
+
+1. **crontab エディタを開く**
+   ```bash
+   crontab -e
+   ```
+
+2. **30分ごとに実行するよう設定**
+   ```bash
+   */30 * * * * cd /srv/scorpion/backend && /path/to/venv/bin/python manage.py sync_bookings >> /var/log/scorpion/sync_bookings.log 2>&1
+   ```
+
+   - `/path/to/venv`: Python 仮想環境のパス
+   - `/srv/scorpion/backend`: プロジェクトルート
+   - `/var/log/scorpion/sync_bookings.log`: ログ出力先
+
+3. **ログの確認**
+   ```bash
+   tail -f /var/log/scorpion/sync_bookings.log
+   ```
+
+#### 方法2: Docker Compose + host cron
+
+1. **crontab エディタを開く**
+   ```bash
+   crontab -e
+   ```
+
+2. **30分ごとに実行**
+   ```bash
+   */30 * * * * cd /srv/scorpion && docker compose exec -T web python manage.py sync_bookings >> /var/log/scorpion/sync_bookings.log 2>&1
+   ```
+
+   - `docker compose` のディレクトリから実行
+   - `-T` フラグで疑似 TTY を無効化（cron 環境では必須）
+
+3. **ログの確認**
+   ```bash
+   tail -f /var/log/scorpion/sync_bookings.log
+   ```
+
+#### 方法3: systemd timer（より堅牢・推奨・本番向け）
+
+1. **サービスファイルを作成**
+   ```bash
+   sudo nano /etc/systemd/system/scorpion-sync-bookings.service
+   ```
+
+   ```ini
+   [Unit]
+   Description=Scorpion Beds24 Sync and Google Sheets Integration
+   After=network.target
+   
+   [Service]
+   Type=oneshot
+   ExecStart=/path/to/venv/bin/python /srv/scorpion/backend/manage.py sync_bookings
+   WorkingDirectory=/srv/scorpion/backend
+   StandardOutput=journal
+   StandardError=journal
+   User=www-data
+   Group=www-data
+   ```
+
+2. **タイマーファイルを作成**
+   ```bash
+   sudo nano /etc/systemd/system/scorpion-sync-bookings.timer
+   ```
+
+   ```ini
+   [Unit]
+   Description=Scorpion Beds24 Sync Timer (30 min intervals)
+   
+   [Timer]
+   OnBootSec=5min
+   OnUnitActiveSec=30min
+   Persistent=true
+   
+   [Install]
+   WantedBy=timers.target
+   ```
+
+3. **有効化と確認**
+   ```bash
+   sudo systemctl daemon-reload
+   sudo systemctl enable scorpion-sync-bookings.timer
+   sudo systemctl start scorpion-sync-bookings.timer
+   
+   # ステータス確認
+   sudo systemctl status scorpion-sync-bookings.timer
+   sudo journalctl -u scorpion-sync-bookings -f
+   ```
+
+### トラブルシューティング
+
+**ログが出力されない場合:**
+```bash
+# cron の実行ログを確認
+grep CRON /var/log/syslog
+
+# systemd の場合
+journalctl -u scorpion-sync-bookings -n 50
+```
+
+**エラーが頻発する場合:**
+- Django 設定 (`DEBUG=False` など) を確認
+- 環境変数（`.env` など）が正しく読み込まれているか確認
+- データベース接続を確認
 
 ## トラブルシューティング
 
@@ -235,14 +383,15 @@ if google_sheets_service.is_configured():
 
 ## 今後の改善案
 
-1. Google Sheets への新規予約の自動登録機能
-2. Beds24 同期時に自動的に Sheets を更新
-3. チェックイン前のゲストへの自動リマインダー送信
-4. Sheets の更新をトリガーとした通知機能
-5. Google Forms との統合
+1. ✓ Beds24 同期時に自動的に Sheets を更新
+2. チェックイン前のゲストへの自動リマインダー送信
+3. Sheets の更新をトリガーとした通知機能（Slack など）
+4. Google Forms との統合
+5. データ分析ダッシュボード化（Google Data Studio など）
 
 ## 参考リンク
 
 - [Google Sheets API ドキュメント](https://developers.google.com/sheets/api)
 - [Google Cloud Platform Console](https://console.cloud.google.com/)
 - [サービスアカウント認証](https://cloud.google.com/docs/authentication/application-default-credentials)
+- [systemd timer リファレンス](https://www.freedesktop.org/software/systemd/man/systemd.timer.html)

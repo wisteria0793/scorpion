@@ -51,14 +51,15 @@
 Google Cloud Platform（GCP）の Sheets API を統合し、予約情報と宿泊者名簿の提出状況をリアルタイムで管理・共有できるようになりました。
 
 ### 主な機能
-1. **自動同期**: Beds24 から取得した新規予約が自動的に Google Sheets に追加
+1. **自動同期**: Beds24 予約同期時に新規予約が自動的に Google Sheets に追加
 2. **提出状況管理**: 宿泊者名簿の提出状況を追跡
 3. **統計・レポート**: 施設ごとの提出完了率を可視化
 4. **API エンドポイント**: RESTful API で提出状況を確認
+5. **定期実行**: `sync_bookings` コマンドを cron/systemd で定期実行
 
-### セットアップ
-- [セットアップガイド](./docs/GOOGLE_SHEETS_API_GUIDE.md)
-- [実装詳細](./docs/GOOGLE_SHEETS_IMPLEMENTATION.md)
+### セットアップと定期実行
+- [セットアップガイド](./docs/GOOGLE_SHEETS_API_GUIDE.md) - GCP 設定と定期実行方法
+- [実装詳細](./docs/GOOGLE_SHEETS_IMPLEMENTATION.md) - 技術仕様
 
 ### 新規 API エンドポイント
 ```
