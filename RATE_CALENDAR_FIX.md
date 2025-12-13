@@ -1,12 +1,65 @@
-# 料金カレンダーが何も表示されない問題 - 修正ガイド
+# 料金カレンダー - 実装ガイド
 
-## 問題
+## Beds24 API 連携（推奨）
+
+### 概要
+Beds24の `getDailyPriceSetup` JSON APIと連携し、日別料金を自動同期します。
+
+### 前提条件
+1. Beds24アカウントとAPIキーの取得
+2. 各施設の `beds24_property_key` と `room_id` を設定
+
+### 設定手順
+
+#### 1. 環境変数の設定
+`.env` ファイルに以下を追加：
+```bash
+BEDS24_API_KEY="your_api_key_here"
+BEDS24_USERNAME="your_username"
+BEDS24_PASSWORD="your_password"
+# または
+BEDS24_ACCOUNT_ID="your_account_id"
+```
+
+#### 2. 施設情報の登録
+Django Adminで各施設に以下を設定：
+- `beds24_property_key`: Beds24の施設識別子（propKey）
+- `room_id`: Beds24の部屋ID（オプション）
+
+#### 3. 料金データの同期
+```bash
+cd /workspaces/scorpion/backend
+
+# 全施設・今日から90日分を同期
+python manage.py sync_rates_from_beds24 --days 90
+
+# 特定施設のみ同期
+python manage.py sync_rates_from_beds24 --property-id 7 --days 30
+
+# 日付範囲を指定
+python manage.py sync_rates_from_beds24 --property-id 7 --start 2025-12-01 --end 2025-12-31
+
+# roomIdを明示的に指定
+python manage.py sync_rates_from_beds24 --property-id 7 --room-id 123456 --days 30
+```
+
+### 定期同期（推奨）
+Cron または Render/Vercel のスケジュール機能で毎日実行：
+```bash
+0 3 * * * cd /path/to/backend && python manage.py sync_rates_from_beds24 --days 90
+```
+
+---
+
+## 手動データ作成（テスト用）
+
+### 問題
 RateCalendar コンポーネントで `property_id: 7` のデータを読み込もうとしても、空配列が返される。
 
-## 原因
+### 原因
 `DailyRate` テーブルに該当する施設（property_id=7）のデータが存在していない。
 
-## 解決方法
+### 解決方法
 
 ### 方法1: すべての施設にデータを一括作成（推奨）
 
@@ -156,3 +209,57 @@ DailyRate API エンドポイント (`/api/daily-rates/`) は `AllowAny` に設�
 class DailyRateViewSet(ModelViewSet):
     permission_classes = [permissions.AllowAny]  # ← この行が必須
 ```
+
+---
+
+## 実装詳細
+
+### ファイル構成
+- **API設定**: [backend/api/settings.py](backend/api/settings.py) - Beds24認証情報
+- **サービス層**: [backend/reservations/services_pricing.py](backend/reservations/services_pricing.py)
+  - `fetch_beds24_daily_price_setup()` - Beds24 API呼び出し
+  - `sync_daily_rates_from_beds24()` - DailyRateへ同期
+- **管理コマンド**: [backend/reservations/management/commands/sync_rates_from_beds24.py](backend/reservations/management/commands/sync_rates_from_beds24.py)
+- **モデル**: [backend/reservations/models_pricing.py](backend/reservations/models_pricing.py) - DailyRateモデル定義
+
+### Beds24 APIペイロード構造
+```json
+{
+  "authentication": {
+    "apiKey": "...",
+    "username": "...",
+    "password": "..."
+  },
+  "dailyPriceSetup": {
+    "propKey": "property_key",
+    "roomId": 123456,
+    "fromDate": "2025-12-01",
+    "toDate": "2025-12-31"
+  }
+}
+```
+
+### レスポンスマッピング
+| Beds24フィールド | DailyRateフィールド | 備考 |
+|-----------------|-------------------|------|
+| `date` | `date` | 日付 |
+| `price` / `basePrice` | `base_price` | 1泊料金 |
+| `minStay` / `minstay` | `min_stay` | 最小宿泊数 |
+| `available` | `available` | 予約可否 |
+| (全体) | `beds24_data` | 元JSONを保存 |
+
+---
+
+## 更新履歴
+
+### 2025-12-13
+- ✅ Beds24 getDailyPriceSetup API連携を追加
+- ✅ propKey/roomId対応
+- ✅ 認証方式の柔軟化（USERNAME/PASSWORD または ACCOUNT_ID）
+- ✅ 管理コマンド `sync_rates_from_beds24` 実装
+- ✅ DailyRateモデルへの自動同期機能
+
+### 2025-12-12
+- ✅ DailyRateViewSet に AllowAny permission 設定
+- ✅ property_id=7 のテストデータ作成
+- ✅ RateCalendar コンポーネントのデバッグログ追加
