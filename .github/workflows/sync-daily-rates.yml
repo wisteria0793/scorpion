@@ -1,0 +1,37 @@
+name: Sync Beds24 Daily Rates
+
+on:
+  schedule:
+    # 毎日午前2時（UTC）に実行（必要に応じて調整）
+    - cron: '0 2 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  sync-rates:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        working-directory: backend
+        run: |
+          pip install -r requirements.txt
+
+      - name: Sync daily rates from Beds24 (CSV)
+        working-directory: backend
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          BEDS24_API_KEY: ${{ secrets.BEDS24_API_KEY }}
+          BEDS24_USERNAME: ${{ secrets.BEDS24_USERNAME }}
+          BEDS24_PASSWORD: ${{ secrets.BEDS24_PASSWORD }}
+          BEDS24_ACCOUNT_ID: ${{ secrets.BEDS24_ACCOUNT_ID }}
+        run: |
+          python manage.py sync_rates_from_beds24 --use-csv --days 90
