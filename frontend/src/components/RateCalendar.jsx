@@ -51,7 +51,9 @@ function RateCalendar() {
                 end_date: lastDay.toISOString().split('T')[0]
             };
             
+            console.log('Loading rates with params:', params);
             const data = await fetchDailyRates(params);
+            console.log('Rates loaded:', data);
             setRates(data);
         } catch (error) {
             console.error('Failed to load rates:', error);

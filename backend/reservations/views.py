@@ -2,7 +2,7 @@
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status
+from rest_framework import status, permissions
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.filters import OrderingFilter
@@ -482,6 +482,7 @@ class DailyRateViewSet(ModelViewSet):
     filterset_fields = ['property', 'property__id', 'date', 'available']
     ordering_fields = ['date', 'base_price', 'created_at']
     ordering = ['date']
+    permission_classes = [permissions.AllowAny]
     
     def get_queryset(self):
         """
