@@ -1,4 +1,7 @@
 # 民泊業務管理サイトの開発
+https://scorpion-eosin.vercel.app/
+ID: admin
+PassWord: H9hez3bQ
 
 ## 目的
 - 現在、webサイトやスマートチェックインシステムに掲載している情報が個別で管理されているため、施設情報等を一元管理
